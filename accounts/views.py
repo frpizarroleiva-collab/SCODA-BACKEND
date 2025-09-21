@@ -27,28 +27,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return Usuario.objects.all()
         return Usuario.objects.filter(id=user.id)
 
-    # Endpoint para ver el perfil del usuario logueado
+    # Endpoint para ver el perfil del usuario actual
     @action(detail=False, methods=['get'], url_path='me', permission_classes=[IsAuthenticated])
     def me(self, request):
         user = request.user
         serializer = PerfilSerializer(user)
-
-        # Generar el nombre abreviado
-        abreviado = ""
-        if user.first_name:
-            nombre = user.first_name.upper()
-        else:
-            nombre = user.username.upper()  # fallback si no tiene first_name
-        if user.last_name:
-            partes = user.last_name.split()
-            iniciales = "".join([p[0].upper() for p in partes])
-            abreviado = f"{nombre} {iniciales}".strip()
-        else:
-            abreviado = nombre
-
-        data = serializer.data
-        data['abreviado'] = abreviado  # 👈 agregamos campo extra
-        return Response(data)
+        return Response(serializer.data)
 
     # Endpoint para buscar usuario por email (solo admin)
     @action(detail=False, methods=['get'], url_path='buscar_por_email', permission_classes=[IsAdminUser])

@@ -6,6 +6,7 @@ from django.utils import timezone
 
 class UsuarioSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    username = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Usuario
@@ -14,10 +15,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'email', 'password', 'rol', 'is_active', 'creado_en'
         ]
         read_only_fields = ['id', 'creado_en']
-        extra_kwargs = {
-            'email': {'validators': []}  # desactiva validador automático de DRF
-        }
-        
+
     def validate_email(self, value):
         if Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError('Este Email ya se encuentra registrado, prueba con otro')
@@ -26,7 +24,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = Usuario(**validated_data)
-        user.set_password(password)  # 🔑 encripta antes de guardar
+        user.set_password(password)  # encripta antes de guardar
         user.save()
         return user
 
@@ -45,29 +43,34 @@ class PerfilSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'email', 'rol', 'is_active', 'creado_en', 'abreviado']
+        fields = [
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'rol', 'is_active', 'creado_en', 'abreviado'
+        ]
         read_only_fields = ['id', 'rol', 'is_active', 'creado_en']
 
     def get_abreviado(self, obj):
-        # Nombre en mayúsculas
-        nombre = (obj.first_name or "").upper()
+        nombre = (obj.first_name or obj.username or "").upper()
         iniciales = ""
         if obj.last_name:
             partes = obj.last_name.split()
             iniciales = "".join([p[0].upper() for p in partes])
-        return f"{nombre} {iniciales}".strip() if nombre or iniciales else None
+        return f"{nombre}{iniciales}".strip() if nombre or iniciales else None
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
+        # añadir info extra al token
+        token['rol'] = user.rol
+        token['email'] = user.email
         return token
+
     def validate(self, attrs):
-            data = super().validate(attrs)
-
-            # 👇 Actualiza la hora de la última conexión
-            self.user.last_login = timezone.now()
-            self.user.save(update_fields=["last_login"])
-
-            return data
+        data = super().validate(attrs)
+        # hora de la última conexión
+        self.user.last_login = timezone.now()
+        self.user.save(update_fields=["last_login"])
+        # devolver también el rol al hacer login
+        return data
