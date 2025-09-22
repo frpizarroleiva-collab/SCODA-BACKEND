@@ -28,7 +28,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         return Usuario.objects.filter(id=user.id)
 
     # Endpoint para ver el perfil del usuario actual
-    @action(detail=False, methods=['get'], url_path='me', permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'], url_path='login', permission_classes=[IsAuthenticated])
     def me(self, request):
         user = request.user
         serializer = PerfilSerializer(user)
