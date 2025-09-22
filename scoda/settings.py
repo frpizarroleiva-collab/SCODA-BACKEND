@@ -64,14 +64,11 @@ CORS_ALLOW_ALL_ORIGINS = True  # en prod, usa lista blanca
 
 
 REST_FRAMEWORK = {
-    "BLACKLIST_AFTER_ROTATION": True,
-    "ROTATE_REFRESH_TOKENS": True,
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.AllowAny",
-        
+        "rest_framework.permissions.IsAuthenticated",
     ),
 }
 
