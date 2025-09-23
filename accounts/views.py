@@ -1,12 +1,10 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Usuario
-from .serializers import UsuarioSerializer, PerfilSerializer
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomTokenObtainPairSerializer
-
+from .models import Usuario
+from .serializers import UsuarioSerializer, PerfilSerializer, CustomTokenObtainPairSerializer
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
@@ -27,15 +25,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return Usuario.objects.all()
         return Usuario.objects.filter(id=user.id)
 
-    # Endpoint para ver el perfil del usuario actual
-    @action(detail=False, methods=['get'], url_path='login', permission_classes=[IsAuthenticated])
-    def me(self, request):
-        user = request.user
-        serializer = PerfilSerializer(user)
-        return Response(serializer.data)
-
     # Endpoint para buscar usuario por email (solo admin)
-    @action(detail=False, methods=['get'], url_path='buscar_por_email', permission_classes=[IsAdminUser])
     def buscar_por_email(self, request):
         email = request.query_params.get('email')
         if not email:
@@ -46,6 +36,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
+
+
+class PerfilView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        serializer = PerfilSerializer(request.user)
+        return Response(serializer.data)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
