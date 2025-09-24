@@ -74,3 +74,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         self.user.save(update_fields=["last_login"])
         # devolver también el rol al hacer login
         return data
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(min_length=6, write_only=True)

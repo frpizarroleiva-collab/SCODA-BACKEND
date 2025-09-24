@@ -27,7 +27,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         ADMIN = "admin", "Administrador"
         APODERADO = "apoderado", "Apoderado"
         PROFESOR = "profesor", "Profesor"
-        ALUMNO = "alumno", "Alumno"
+        PORTERIA = "porteria", "Portería"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, blank=True, null=True)   # opcional
@@ -38,7 +38,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     rol = models.CharField(
         max_length=20,
         choices=Roles.choices,
-        default=Roles.ALUMNO
+        default=Roles.APODERADO
     )
 
     is_active = models.BooleanField(default=True)
