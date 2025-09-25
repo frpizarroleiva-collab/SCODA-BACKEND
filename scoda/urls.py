@@ -22,8 +22,4 @@ urlpatterns = [
     # JWT Auth
     path('api/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/acceso/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    #path('api/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
-
-    # Perfil del usuario autenticado
-    #path('api/login/', PerfilView.as_view(), name='perfil_usuario'),
 ]
