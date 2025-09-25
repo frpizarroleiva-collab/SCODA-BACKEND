@@ -20,10 +20,10 @@ urlpatterns = [
     path('api/', include(router.urls)),
 
     # JWT Auth
-    path('api/acceso/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/acceso/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    #path('api/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
 
     # Perfil del usuario autenticado
-    path('api/login/', PerfilView.as_view(), name='perfil_usuario'),
+    #path('api/login/', PerfilView.as_view(), name='perfil_usuario'),
 ]
