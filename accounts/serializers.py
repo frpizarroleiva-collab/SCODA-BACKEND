@@ -73,6 +73,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         self.user.last_login = timezone.now()
         self.user.save(update_fields=["last_login"])
         # devolver también el rol al hacer login
+        data['user'] = PerfilSerializer(self.user).data  
         return data
 
 class ResetPasswordSerializer(serializers.Serializer):
