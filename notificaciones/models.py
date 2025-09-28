@@ -1,16 +1,16 @@
 ﻿from django.db import models
 from django.conf import settings
-
+from django.utils import timezone
 
 class Notificacion(models.Model):
     usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL,   # apunta al User real de tu proyecto
+        settings.AUTH_USER_MODEL,
         on_delete=models.DO_NOTHING,
         related_name='notificaciones'
     )
     mensaje = models.TextField()
-    leido = models.BooleanField()
-    fecha_envio = models.DateTimeField()
+    leido = models.BooleanField(default=False)
+    fecha_envio = models.DateTimeField(default=timezone.now)  #fecha automática
 
     class Meta:
         db_table = 'notificacion'

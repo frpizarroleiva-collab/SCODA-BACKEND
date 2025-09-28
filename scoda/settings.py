@@ -13,6 +13,9 @@ env = environ.Env(
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
+SCODA_API_KEY = config("SCODA_API_KEY", default="")
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -37,12 +40,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'accounts',
     'escuela',
     'personas',
     'alumnos',
     'establecimientos',
     'ubicacion',
+    'accounts.apps.AccountsConfig',
     'notificaciones',
     'auditoria'
 ]
@@ -73,7 +76,7 @@ REST_FRAMEWORK = {
 }
 
 
-#tiempos de expiración
+#tiempos de expiración de los token
 from datetime import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -100,8 +103,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'scoda.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#Coneccion a la base de datos local o Supabase mediante variables definidas en .env
 
 DB_ENV = config("DB_ENV", default="local")
 
@@ -128,9 +130,6 @@ else:  # supabase
         }
     }
 
-
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {

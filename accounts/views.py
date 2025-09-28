@@ -6,17 +6,18 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import Usuario
 from .serializers import UsuarioSerializer, PerfilSerializer, CustomTokenObtainPairSerializer, ResetPasswordSerializer
 from rest_framework.decorators import action
+from .permiso import HasAPIKey
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasAPIKey]
     lookup_field = "email"
     lookup_value_regex = "[^/]+"
 
     def get_permissions(self):
         if self.action in ['reset_password']:
-            return [AllowAny()]
+            return [HasAPIKey()]
         
         # Solo admin puede listar, crear, editar o borrar
         if self.action in ['list', 'create', 'update', 'partial_update', 'destroy']:
@@ -68,3 +69,4 @@ class PerfilView(APIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    permission_classes = [AllowAny, HasAPIKey]

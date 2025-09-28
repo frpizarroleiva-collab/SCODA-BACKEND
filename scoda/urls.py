@@ -7,7 +7,7 @@ from personas.views import PersonaViewSet
 from establecimientos.views import EstablecimientoViewSet
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'cursos', CursoViewSet, basename='curso')
 router.register(r'personas', PersonaViewSet, basename='persona')
@@ -20,6 +20,6 @@ urlpatterns = [
     path('api/', include(router.urls)),
 
     # JWT Auth
-    path('api/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/acceso/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/login', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/acceso/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 ]
