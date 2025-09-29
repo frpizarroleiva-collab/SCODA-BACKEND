@@ -7,6 +7,8 @@ from .models import Usuario
 from .serializers import UsuarioSerializer, PerfilSerializer, CustomTokenObtainPairSerializer, ResetPasswordSerializer
 from rest_framework.decorators import action
 from .permiso import HasAPIKey
+from django.core.mail import send_mail
+from notificaciones.models import Notificacion
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
@@ -57,7 +59,25 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         user.set_password(new_password)
         user.save()
+        # Guardar notificación en la base de datos de recuperar pass
+        Notificacion.objects.create(
+            usuario=user,
+            mensaje=f"La contraseña de {user.email} ha sido cambiada"
+        )
 
+          # Enviar correo
+        send_mail(
+            subject="Cambio de contraseña en SCODA",
+            message=(
+                f"Hola {user.first_name},\n\n"
+                f"Tu contraseña ha sido cambiada correctamente.\n\n"
+                f"Si no realizaste este cambio, contacta al administrador.\n\n"
+                f"Saludos,\nEquipo SCODA"
+            ),
+            from_email=None,  # usa DEFAULT_FROM_EMAIL de settings.py
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
         return Response({"message": "Contraseña actualizada con éxito"}, status=200)
 
 class PerfilView(APIView):
