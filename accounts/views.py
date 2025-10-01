@@ -1,14 +1,23 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated, IsAdminUser,AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import Usuario
-from .serializers import UsuarioSerializer, PerfilSerializer, CustomTokenObtainPairSerializer, ResetPasswordSerializer
 from rest_framework.decorators import action
-from .permiso import HasAPIKey
 from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+
+from .models import Usuario
+from .serializers import (
+    UsuarioSerializer,
+    PerfilSerializer,
+    CustomTokenObtainPairSerializer,
+    ResetPasswordSerializer
+)
+from .permiso import HasAPIKey
 from notificaciones.models import Notificacion
+
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
@@ -18,10 +27,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     lookup_value_regex = "[^/]+"
 
     def get_permissions(self):
+        # Nuevo endpoint: link único para definir contraseña
+        if self.action in ['reset_password_confirm']:
+            return [AllowAny()]  # No pide APIKey ni JWT, se asegura con token
+        # Endpoint clásico reset (con email + pass)
         if self.action in ['reset_password']:
             return [HasAPIKey()]
-        
-        # Solo admin puede listar, crear, editar o borrar
+        # Solo admin puede CRUD usuarios
         if self.action in ['list', 'create', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
@@ -32,7 +44,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return Usuario.objects.all()
         return Usuario.objects.filter(id=user.id)
 
-    # Endpoint para buscar usuario por email (solo admin)
+    # Buscar usuario por email (solo admin)
     def buscar_por_email(self, request):
         email = request.query_params.get('email')
         if not email:
@@ -44,6 +56,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado"}, status=404)
 
+    # Reset password clásico (requiere email + nueva pass)
     @action(detail=False, methods=['post'], url_path='reset-password')
     def reset_password(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
@@ -59,13 +72,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         user.set_password(new_password)
         user.save()
-        # Guardar notificación en la base de datos de recuperar pass
+
+        # Notificación
         Notificacion.objects.create(
             usuario=user,
             mensaje=f"La contraseña de {user.email} ha sido cambiada"
         )
 
-          # Enviar correo
+        # Correo
         send_mail(
             subject="Cambio de contraseña en SCODA",
             message=(
@@ -74,14 +88,47 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 f"Si no realizaste este cambio, contacta al administrador.\n\n"
                 f"Saludos,\nEquipo SCODA"
             ),
-            from_email=None,  # usa DEFAULT_FROM_EMAIL de settings.py
+            from_email=None,  # usa DEFAULT_FROM_EMAIL
             recipient_list=[user.email],
             fail_silently=False,
         )
         return Response({"message": "Contraseña actualizada con éxito"}, status=200)
 
+    # Nuevo: confirmar reset con link único (uid + token + pass)
+    @action(detail=False, methods=['post'], url_path='reset-password-confirm')
+    def reset_password_confirm(self, request):
+        uidb64 = request.data.get("uid")
+        token = request.data.get("token")
+        new_password = request.data.get("password")
+
+        if not uidb64 or not token or not new_password:
+            return Response({"error": "Faltan parámetros"}, status=400)
+
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = Usuario.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+            return Response({"error": "Enlace inválido"}, status=400)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"error": "El enlace ha expirado o es inválido"}, status=400)
+
+        # Cambiar contraseña
+        user.set_password(new_password)
+        user.save()
+
+        # Notificación
+        Notificacion.objects.create(
+            usuario=user,
+            mensaje=f"El usuario {user.email} definió su contraseña con link"
+        )
+
+        return Response({"message": "Contraseña creada con éxito"}, status=200)
+
+
 class PerfilView(APIView):
     permission_classes = [IsAuthenticated]
+
     def get(self, request):
         serializer = PerfilSerializer(request.user)
         return Response(serializer.data)
