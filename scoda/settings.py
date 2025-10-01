@@ -15,6 +15,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 SCODA_API_KEY = config("SCODA_API_KEY", default="")
 
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
 #CORREO
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
