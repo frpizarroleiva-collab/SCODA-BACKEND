@@ -26,7 +26,8 @@ def notificar_creacion_usuario(sender, instance, created, **kwargs):
         # Generar token único de reset
         uid = urlsafe_base64_encode(force_bytes(instance.pk))
         token = default_token_generator.make_token(instance)
-        reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+        reset_url = f"{settings.BACKEND_URL}/api/usuarios/reset-password-confirm/{uid}/{token}/"
+
 
         # Correo
         asunto = "Bienvenido a SCODA"
