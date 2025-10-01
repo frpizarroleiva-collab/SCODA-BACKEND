@@ -139,6 +139,9 @@ else:  # supabase
             "PASSWORD": config("DB_PASSWORD"),
             "HOST": config("DB_HOST"),
             "PORT": config("DB_PORT"),
+            "OPTIONS": {
+                "prepared_statements": False  # Necesario con PgBouncer pooler
+            }
         }
     }
 
