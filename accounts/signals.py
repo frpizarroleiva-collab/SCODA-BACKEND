@@ -38,10 +38,12 @@ def notificar_creacion_usuario(sender, instance, created, **kwargs):
             f"Haz clic en el siguiente enlace:\n{reset_url}\n\n"
             f"Saludos,\nEquipo SCODA"
         )
+        
+        nombre = f"{instance.first_name or ''} {instance.last_name or ''}".strip()
         mensaje_html = f"""
         <html>
           <body style="font-family: Arial, sans-serif; color:#333;">
-            <h2>¡Bienvenido a SCODA, {instance.first_name + " " + (instance.last_name or '')}!</h2>
+            <h2>¡Bienvenido a SCODA, {nombre}!</h2>
             <p>Tu cuenta con el correo <b>{instance.email}</b> ha sido creada exitosamente.</p>
             <p><b>Antes de iniciar sesión, debes definir tu contraseña.</b></p>
             <p>

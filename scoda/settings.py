@@ -162,3 +162,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "accounts.Usuario"
+
+
+BACKEND_URL = env("BACKEND_URL", default="http://127.0.0.1:8000")
