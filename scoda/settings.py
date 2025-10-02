@@ -1,30 +1,27 @@
 from pathlib import Path
 import environ
 import os
-from decouple import config
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Inicializar entorno
+# Inicializar entorno con django-environ
 env = environ.Env(
     DEBUG=(bool, False)
 )
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
-SCODA_API_KEY = config("SCODA_API_KEY", default="")
-
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+SCODA_API_KEY = env("SCODA_API_KEY", default="")
 
 # CORREO
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = env("SECRET_KEY")
@@ -103,33 +100,34 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'scoda.wsgi.application'
 
-# 🚨 FIX: evitar que Render inyecte DATABASE_URL con parámetros inválidos
+# 🚨 FIX Render: evitar que DATABASE_URL se cuele
 if "DATABASE_URL" in os.environ:
     del os.environ["DATABASE_URL"]
 
 # Conexión a la base de datos local o Supabase mediante variables definidas en .env
-DB_ENV = config("DB_ENV", default="local")
+DB_ENV = env("DB_ENV", default="local")
 
 if DB_ENV == "local":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": config("LOCAL_DB_NAME"),
-            "USER": config("LOCAL_DB_USER"),
-            "PASSWORD": config("LOCAL_DB_PASSWORD"),
-            "HOST": config("LOCAL_DB_HOST"),
-            "PORT": config("LOCAL_DB_PORT"),
+            "NAME": env("LOCAL_DB_NAME"),
+            "USER": env("LOCAL_DB_USER"),
+            "PASSWORD": env("LOCAL_DB_PASSWORD"),
+            "HOST": env("LOCAL_DB_HOST"),
+            "PORT": env("LOCAL_DB_PORT"),
         }
     }
 else:  # supabase
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": config("DB_NAME"),
-            "USER": config("DB_USER"),
-            "PASSWORD": config("DB_PASSWORD"),
-            "HOST": config("DB_HOST"),
-            "PORT": config("DB_PORT"),
+            "NAME": env("DB_NAME"),
+            "USER": env("DB_USER"),
+            "PASSWORD": env("DB_PASSWORD"),
+            "HOST": env("DB_HOST"),
+            "PORT": env("DB_PORT"),
+            "OPTIONS": {},  # limpia parámetros extra como use_prepared_statements
         }
     }
 
