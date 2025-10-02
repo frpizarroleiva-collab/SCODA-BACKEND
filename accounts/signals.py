@@ -26,24 +26,28 @@ def notificar_creacion_usuario(sender, instance, created, **kwargs):
         # Generar token único de reset
         uid = urlsafe_base64_encode(force_bytes(instance.pk))
         token = default_token_generator.make_token(instance)
-        reset_url = f"{settings.BACKEND_URL}/api/usuarios/reset-password-confirm/{uid}/{token}/"
 
+        # Usar BACKEND_URL del settings o fallback a localhost
+        backend_url = getattr(settings, "BACKEND_URL", "http://127.0.0.1:8000")
+        reset_url = f"{backend_url}/usuarios/reset-password-form/{uid}/{token}/"
 
-        # Correo
+        # Preparar datos dinámicos
+        nombre = f"{instance.first_name or ''} {instance.last_name or ''}".strip()
         asunto = "Bienvenido a SCODA"
+
+        # Versión de texto plano
         mensaje_texto = (
-            f"Hola {instance.first_name},\n\n"
+            f"Hola {nombre or instance.email},\n\n"
             f"Tu cuenta ({instance.email}) ha sido creada exitosamente.\n"
             f"Antes de acceder, debes definir tu contraseña.\n\n"
             f"Haz clic en el siguiente enlace:\n{reset_url}\n\n"
             f"Saludos,\nEquipo SCODA"
         )
-        
-        nombre = f"{instance.first_name or ''} {instance.last_name or ''}".strip()
+        # Versión HTML
         mensaje_html = f"""
         <html>
           <body style="font-family: Arial, sans-serif; color:#333;">
-            <h2>¡Bienvenido a SCODA, {nombre}!</h2>
+            <h2>¡Bienvenido a SCODA, {nombre or instance.email}!</h2>
             <p>Tu cuenta con el correo <b>{instance.email}</b> ha sido creada exitosamente.</p>
             <p><b>Antes de iniciar sesión, debes definir tu contraseña.</b></p>
             <p>
@@ -58,11 +62,11 @@ def notificar_creacion_usuario(sender, instance, created, **kwargs):
           </body>
         </html>
         """
-
+        # Enviar correo
         send_mail(
             subject=asunto,
             message=mensaje_texto,
-            from_email=None,             # usa DEFAULT_FROM_EMAIL
+            from_email=settings.DEFAULT_FROM_EMAIL,  # usa lo del .env
             recipient_list=[instance.email],
             html_message=mensaje_html,
             fail_silently=False,

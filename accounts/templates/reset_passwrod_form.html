@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Definir nueva contraseña</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #007BFF;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Definir nueva contraseña</h2>
+        <form id="resetForm">
+            <input type="password" id="password1" placeholder="Nueva contraseña" required>
+            <input type="password" id="password2" placeholder="Repite la contraseña" required>
+            <button type="submit">Cambiar contraseña</button>
+        </form>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        document.getElementById("resetForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const password1 = document.getElementById("password1").value;
+            const password2 = document.getElementById("password2").value;
+            const messageEl = document.getElementById("message");
+
+            // Extraer UID y token desde la URL
+            const pathParts = window.location.pathname.split("/");
+            const uid = pathParts[pathParts.length - 3];  
+            const token = pathParts[pathParts.length - 2]; 
+
+            try {
+                const response = await fetch("/api/usuarios/reset-password-confirm", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-API-KEY": "{{ SCODA_API_KEY }}"  // opcional si tu endpoint lo pide
+                    },
+                    body: JSON.stringify({ uid, token, password1, password2 })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Redirigir a la página de éxito
+                    window.location.href = "/usuarios/reset-password-done/";
+                } else {
+                    messageEl.textContent = data.error || "Error al cambiar la contraseña.";
+                    messageEl.className = "error";
+                }
+            } catch (err) {
+                messageEl.textContent = "Error de conexión con el servidor.";
+                messageEl.className = "error";
+            }
+        });
+    </script>
+</body>
+</html>

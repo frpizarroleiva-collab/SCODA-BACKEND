@@ -7,6 +7,8 @@ from rest_framework.decorators import action
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_decode
 from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import render
+from django.views import View
 
 from .models import Usuario
 from .serializers import (
@@ -27,13 +29,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     lookup_value_regex = "[^/]+"
 
     def get_permissions(self):
-        # Nuevo endpoint: link único para definir contraseña
         if self.action in ['reset_password_confirm']:
-            return [AllowAny()]  # No pide APIKey ni JWT, se asegura con token
-        # Endpoint clásico reset (con email + pass)
+            return [AllowAny()]  # token asegura el acceso
         if self.action in ['reset_password']:
             return [HasAPIKey()]
-        # Solo admin puede CRUD usuarios
         if self.action in ['list', 'create', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
@@ -79,11 +78,11 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             mensaje=f"La contraseña de {user.email} ha sido cambiada"
         )
 
-        # Correo
+        # Correo de confirmación
         send_mail(
             subject="Cambio de contraseña en SCODA",
             message=(
-                f"Hola {user.first_name},\n\n"
+                f"Hola {user.first_name or user.email},\n\n"
                 f"Tu contraseña ha sido cambiada correctamente.\n\n"
                 f"Si no realizaste este cambio, contacta al administrador.\n\n"
                 f"Saludos,\nEquipo SCODA"
@@ -94,15 +93,19 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         )
         return Response({"message": "Contraseña actualizada con éxito"}, status=200)
 
-    # Nuevo: confirmar reset con link único (uid + token + pass)
+    # Confirmar reset con link único (uid + token + pass1 + pass2)
     @action(detail=False, methods=['post'], url_path='reset-password-confirm')
     def reset_password_confirm(self, request):
         uidb64 = request.data.get("uid")
         token = request.data.get("token")
-        new_password = request.data.get("password")
+        password1 = request.data.get("password1")
+        password2 = request.data.get("password2")
 
-        if not uidb64 or not token or not new_password:
+        if not uidb64 or not token or not password1 or not password2:
             return Response({"error": "Faltan parámetros"}, status=400)
+
+        if password1 != password2:
+            return Response({"error": "Las contraseñas no coinciden"}, status=400)
 
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
@@ -113,14 +116,28 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if not default_token_generator.check_token(user, token):
             return Response({"error": "El enlace ha expirado o es inválido"}, status=400)
 
-        # Cambiar contraseña
-        user.set_password(new_password)
+        # Guardar nueva contraseña
+        user.set_password(password1)
         user.save()
 
         # Notificación
         Notificacion.objects.create(
             usuario=user,
             mensaje=f"El usuario {user.email} definió su contraseña con link"
+        )
+
+        # Correo de confirmación
+        send_mail(
+            subject="Contraseña definida en SCODA",
+            message=(
+                f"Hola {user.first_name or user.email},\n\n"
+                f"Tu contraseña ha sido creada correctamente.\n\n"
+                f"Si no realizaste este proceso, contacta al administrador.\n\n"
+                f"Saludos,\nEquipo SCODA"
+            ),
+            from_email=None,  # usa DEFAULT_FROM_EMAIL
+            recipient_list=[user.email],
+            fail_silently=False,
         )
 
         return Response({"message": "Contraseña creada con éxito"}, status=200)
@@ -137,3 +154,15 @@ class PerfilView(APIView):
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny, HasAPIKey]
+
+
+# Nueva vista: renderiza formulario HTML
+class ResetPasswordFormView(View):
+    def get(self, request, uid, token):
+        return render(request, "reset_password_form.html", {"uid": uid, "token": token})
+
+
+# Nueva vista: mensaje final tras éxito
+class ResetPasswordDoneView(View):
+    def get(self, request):
+        return render(request, "reset_password_done.html")
