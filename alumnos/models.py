@@ -1,48 +1,77 @@
 ﻿from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class Alumno(models.Model):
     # Relación 1 a 1 con Persona (cada alumno es una persona)
     persona = models.OneToOneField(
         'personas.Persona',
-        on_delete=models.CASCADE,  # si borras la persona → se borra también el alumno
+        on_delete=models.CASCADE,
         related_name="alumno"
     )
 
     # Relación con Curso (en app escuela)
     curso = models.ForeignKey(
         'escuela.Curso',
-        on_delete=models.SET_NULL,   # si borras el curso → el alumno queda sin curso
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
         related_name="alumnos"
     )
 
-    # Relación con Apoderado (otra Persona en app personas)
-    apoderado = models.ForeignKey(
+    # Nueva relación: varios apoderados por alumno
+    apoderados = models.ManyToManyField(
         'personas.Persona',
-        on_delete=models.SET_NULL,   # si borras el apoderado → el campo queda vacío
-        related_name='alumnos_como_apoderado',
-        blank=True,
-        null=True
+        through='ApoderadoAlumno',
+        related_name='alumnos_asociados'
     )
 
     class Meta:
         db_table = 'alumno'
 
     def __str__(self):
-        return f"{self.persona.nombre} {self.persona.apellido}"
+        return f"{self.persona.nombres} {self.persona.apellido_uno}"
 
+
+# Tabla intermedia personalizada
+class ApoderadoAlumno(models.Model):
+    alumno = models.ForeignKey(
+        'alumnos.Alumno',
+        on_delete=models.CASCADE,
+        related_name='relaciones_apoderados'
+    )
+    apoderado = models.ForeignKey(
+        'personas.Persona',
+        on_delete=models.CASCADE,
+        related_name='relaciones_alumnos'
+    )
+    tipo_relacion = models.CharField(max_length=80)  # ej: madre, padre, tutor
+
+    class Meta:
+        db_table = 'apoderado_alumno'
+        unique_together = (('alumno', 'apoderado'),)
+
+    def clean(self):
+        # Límite de 3 apoderados por alumno
+        if self.alumno.relaciones_apoderados.count() >= 3 and not self.pk:
+            raise ValidationError("Un alumno no puede tener más de 3 apoderados.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.apoderado.nombres} → {self.alumno.persona.nombres}"
 
 class PersonaAutorizadaAlumno(models.Model):
     alumno = models.ForeignKey(
         'alumnos.Alumno',
-        on_delete=models.CASCADE,   # si borras el alumno → se borran las autorizaciones
+        on_delete=models.CASCADE,
         related_name="personas_autorizadas"
     )
     persona = models.ForeignKey(
         'personas.Persona',
-        on_delete=models.CASCADE,   # si borras la persona → se borra la autorización
+        on_delete=models.CASCADE,
         related_name="autorizaciones"
     )
     tipo_relacion = models.CharField(max_length=80)
@@ -75,4 +104,4 @@ class QrAutorizacion(models.Model):
         unique_together = (('persona_autorizada', 'alumno', 'codigo_qr'),)
 
     def __str__(self):
-        return f"QR {self.codigo_qr} → {self.alumno.persona.nombre}"
+        return f"QR {self.codigo_qr} → {self.alumno.persona.nombres}"

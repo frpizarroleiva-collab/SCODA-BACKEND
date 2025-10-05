@@ -153,7 +153,7 @@ class PerfilView(APIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
-    permission_classes = [AllowAny, HasAPIKey]
+    permission_classes = [HasAPIKey]
 
 
 # Nueva vista: renderiza formulario HTML

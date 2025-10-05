@@ -3,15 +3,16 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from accounts.views import (
     UsuarioViewSet, 
-    CustomTokenObtainPairView, 
-    PerfilView,
+    CustomTokenObtainPairView,
     ResetPasswordFormView, 
     ResetPasswordDoneView
 )
 from escuela.views import CursoViewSet
 from personas.views import PersonaViewSet
 from establecimientos.views import EstablecimientoViewSet
-from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
+from alumnos.views import AlumnoViewSet
+from rest_framework_simplejwt.views import TokenRefreshView
+from alumnos.views import ApoderadoAlumnoViewSet, PersonaAutorizadaAlumnoViewSet
 
 # Routers API
 router = DefaultRouter(trailing_slash=False)
@@ -19,6 +20,9 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'cursos', CursoViewSet, basename='curso')
 router.register(r'personas', PersonaViewSet, basename='persona')
 router.register(r'establecimientos', EstablecimientoViewSet, basename='establecimiento')
+router.register(r'alumnos', AlumnoViewSet, basename='alumno')
+router.register(r'apoderados', ApoderadoAlumnoViewSet, basename='apoderado')
+router.register(r'autorizados', PersonaAutorizadaAlumnoViewSet, basename='autorizado')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
