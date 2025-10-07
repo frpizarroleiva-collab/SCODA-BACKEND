@@ -1,12 +1,24 @@
 # Entorno virtual
 venv/
-
-# Archivos de entorno
-.env
-
-# Archivos compilados de Python
-__pycache__/
 *.pyc
+__pycache__/
+
+# Archivos de entorno (nunca subir)
+.env
 
 # Archivos de logs
 *.log
+
+# Archivos temporales o del sistema
+*.sqlite3
+.DS_Store
+
+# Archivos de configuración del IDE (VS Code, etc.)
+.vscode/
+.idea/
+
+# Comenta esta línea si Render no muestra estilos
+# /staticfiles
+
+# Archivos de migraciones que Django genera (se deben mantener)
+# /migrations/
