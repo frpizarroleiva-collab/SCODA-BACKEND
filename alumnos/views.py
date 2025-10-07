@@ -2,67 +2,24 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from accounts.permiso import HasAPIKey
-from .models import Alumno, ApoderadoAlumno, PersonaAutorizadaAlumno
+from .models import Alumno, PersonaAutorizadaAlumno
 from .serializers import AlumnoSerializer
-from personas.models import Persona
 
 
-# 🔹 1. ViewSet principal para alumnos
+# 🔹 1. CRUD principal de alumnos
 class AlumnoViewSet(viewsets.ModelViewSet):
     """
-    CRUD de alumnos, incluyendo relaciones con persona y curso.
+    CRUD de alumnos con relaciones a Persona, Curso y Personas Autorizadas.
     """
     queryset = Alumno.objects.all()
     serializer_class = AlumnoSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
 
 
-# 🔹 2. ViewSet para apoderados (tabla intermedia personalizada)
-class ApoderadoAlumnoViewSet(viewsets.ModelViewSet):
-    """
-    Permite registrar apoderados asociados a un alumno.
-    """
-    queryset = ApoderadoAlumno.objects.all()
-    permission_classes = [IsAuthenticated, HasAPIKey]
-
-    def create(self, request, *args, **kwargs):
-        alumno_id = request.data.get("alumno")
-        apoderado_id = request.data.get("apoderado")
-        tipo_relacion = request.data.get("tipo_relacion")
-
-        if not alumno_id or not apoderado_id or not tipo_relacion:
-            return Response(
-                {"error": "Debes enviar 'alumno', 'apoderado' y 'tipo_relacion'."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Validar máximo de 3 apoderados
-        if ApoderadoAlumno.objects.filter(alumno_id=alumno_id).count() >= 3:
-            return Response(
-                {"error": "Este alumno ya tiene 3 apoderados registrados."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        apoderado = ApoderadoAlumno.objects.create(
-            alumno_id=alumno_id,
-            apoderado_id=apoderado_id,
-            tipo_relacion=tipo_relacion
-        )
-
-        return Response({
-            "mensaje": "Apoderado asociado correctamente.",
-            "data": {
-                "alumno": apoderado.alumno.persona.nombres,
-                "apoderado": apoderado.apoderado.nombres,
-                "tipo_relacion": apoderado.tipo_relacion
-            }
-        }, status=status.HTTP_201_CREATED)
-
-
-# 🔹 3. ViewSet para personas autorizadas (quienes pueden retirar al alumno)
+# 🔹 2. CRUD para personas autorizadas (apoderados o terceros)
 class PersonaAutorizadaAlumnoViewSet(viewsets.ModelViewSet):
     """
-    Permite registrar personas autorizadas para retirar alumnos.
+    Permite registrar, listar o eliminar personas autorizadas para retirar alumnos.
     """
     queryset = PersonaAutorizadaAlumno.objects.all()
     permission_classes = [IsAuthenticated, HasAPIKey]
@@ -71,6 +28,7 @@ class PersonaAutorizadaAlumnoViewSet(viewsets.ModelViewSet):
         alumno_id = request.data.get("alumno")
         persona_id = request.data.get("persona")
         tipo_relacion = request.data.get("tipo_relacion")
+        autorizado = request.data.get("autorizado", True)
 
         if not alumno_id or not persona_id or not tipo_relacion:
             return Response(
@@ -78,17 +36,26 @@ class PersonaAutorizadaAlumnoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        autorizado = PersonaAutorizadaAlumno.objects.create(
+        # Evita duplicados
+        if PersonaAutorizadaAlumno.objects.filter(alumno_id=alumno_id, persona_id=persona_id).exists():
+            return Response(
+                {"error": "Esta persona ya está registrada para este alumno."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        persona_aut = PersonaAutorizadaAlumno.objects.create(
             alumno_id=alumno_id,
             persona_id=persona_id,
-            tipo_relacion=tipo_relacion
+            tipo_relacion=tipo_relacion,
+            autorizado=autorizado
         )
 
         return Response({
-            "mensaje": "Persona autorizada registrada correctamente.",
+            "mensaje": "Persona asociada correctamente.",
             "data": {
-                "alumno": autorizado.alumno.persona.nombres,
-                "persona": autorizado.persona.nombres,
-                "tipo_relacion": autorizado.tipo_relacion
+                "alumno": persona_aut.alumno.persona.nombres,
+                "persona": persona_aut.persona.nombres,
+                "tipo_relacion": persona_aut.tipo_relacion,
+                "autorizado": persona_aut.autorizado
             }
         }, status=status.HTTP_201_CREATED)

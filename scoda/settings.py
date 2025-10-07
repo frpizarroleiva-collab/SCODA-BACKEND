@@ -3,10 +3,8 @@ import environ
 import os
 from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Inicializar entorno con django-environ
 env = environ.Env(
     DEBUG=(bool, False)
 )
@@ -23,7 +21,6 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 
-# SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 
@@ -100,9 +97,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'scoda.wsgi.application'
 
-# 🚨 FIX Render: evitar que DATABASE_URL se cuele
-if "DATABASE_URL" in os.environ:
-    del os.environ["DATABASE_URL"]
+# if "DATABASE_URL" in os.environ:
+#     del os.environ["DATABASE_URL"]
 
 # Conexión a la base de datos local o Supabase mediante variables definidas en .env
 DB_ENV = env("DB_ENV", default="local")
@@ -127,7 +123,6 @@ else:  # supabase
             "PASSWORD": env("DB_PASSWORD"),
             "HOST": env("DB_HOST"),
             "PORT": env("DB_PORT"),
-            "OPTIONS": {},  # limpia parámetros extra como use_prepared_statements
         }
     }
 

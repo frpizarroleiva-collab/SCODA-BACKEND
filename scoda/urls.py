@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenRefreshView
+
+# Vistas propias
 from accounts.views import (
     UsuarioViewSet, 
     CustomTokenObtainPairView,
@@ -10,24 +13,21 @@ from accounts.views import (
 from escuela.views import CursoViewSet
 from personas.views import PersonaViewSet
 from establecimientos.views import EstablecimientoViewSet
-from alumnos.views import AlumnoViewSet
-from rest_framework_simplejwt.views import TokenRefreshView
-from alumnos.views import ApoderadoAlumnoViewSet, PersonaAutorizadaAlumnoViewSet
+from alumnos.views import AlumnoViewSet, PersonaAutorizadaAlumnoViewSet
 
-# Routers API
+#Configuración del router
 router = DefaultRouter(trailing_slash=False)
 router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'cursos', CursoViewSet, basename='curso')
 router.register(r'personas', PersonaViewSet, basename='persona')
 router.register(r'establecimientos', EstablecimientoViewSet, basename='establecimiento')
 router.register(r'alumnos', AlumnoViewSet, basename='alumno')
-router.register(r'apoderados', ApoderadoAlumnoViewSet, basename='apoderado')
 router.register(r'autorizados', PersonaAutorizadaAlumnoViewSet, basename='autorizado')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # API endpoints
+    # API endpoints principales
     path('api/', include(router.urls)),
 
     # JWT Auth
