@@ -114,7 +114,7 @@ if DB_ENV == "local":
             "PORT": env("LOCAL_DB_PORT"),
         }
     }
-else:  # supabase
+else: 
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -125,6 +125,7 @@ else:  # supabase
             "PORT": env("DB_PORT", cast=int, default=5432),
             "OPTIONS": {
                 "sslmode": os.getenv("DB_SSLMODE", "require"),
+                'options': '-c search_path=scoda_sys,public'
             },
         }
     }
