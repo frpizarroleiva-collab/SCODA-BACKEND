@@ -20,14 +20,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated, HasAPIKey]
     )
     def validar_run(self, request):
-        """
-        Valida si un RUN existe, y devuelve:
-        - Datos de la persona
-        - Si es apoderado (y sus alumnos)
-        - Si es persona autorizada (y para qué alumnos)
-        """
         run = request.data.get("run")
-
         if not run:
             return Response({
                 "existe": False,
