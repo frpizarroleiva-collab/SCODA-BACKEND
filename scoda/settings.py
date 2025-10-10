@@ -115,7 +115,7 @@ if DB_ENV == "local":
         }
     }
 else: 
-    DATABASES = {
+     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": env("DB_NAME"),
@@ -123,12 +123,23 @@ else:
             "PASSWORD": env("DB_PASSWORD"),
             "HOST": env("DB_HOST"),
             "PORT": env("DB_PORT", cast=int, default=5432),
-            "OPTIONS": {
-                "sslmode": os.getenv("DB_SSLMODE", "require"),
-                'options': '-c search_path=scoda_sys,public'
-            },
+            "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require"),},
         }
     }
+    # DATABASES = {
+    #     "default": {
+    #         "ENGINE": "django.db.backends.postgresql",
+    #         "NAME": env("DB_NAME"),
+    #         "USER": env("DB_USER"),
+    #         "PASSWORD": env("DB_PASSWORD"),
+    #         "HOST": env("DB_HOST"),
+    #         "PORT": env("DB_PORT", cast=int, default=5432),
+    #         "OPTIONS": {
+    #             "sslmode": os.getenv("DB_SSLMODE", "require"),
+    #             'options': '-c search_path=scoda_sys,public'
+    #         },
+    #     }
+    # }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
