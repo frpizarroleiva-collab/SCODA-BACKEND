@@ -5,7 +5,7 @@ from alumnos.models import Alumno
 
 class CursoSerializer(serializers.ModelSerializer):
     """Serializer básico del Curso, usado para listar o crear."""
-    profesor_nombre = serializers.SerializerMethodField()
+    profesor_nombre = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Curso
@@ -20,7 +20,7 @@ class CursoSerializer(serializers.ModelSerializer):
 
 class AlumnoMiniSerializer(serializers.ModelSerializer):
     """Serializer simplificado del alumno, usado para /api/cursos/<id>/alumnos/"""
-    nombre_completo = serializers.SerializerMethodField()
+    nombre_completo = serializers.SerializerMethodField(read_only=True)
     rut = serializers.CharField(source='persona.run', read_only=True)
 
     class Meta:
@@ -30,4 +30,6 @@ class AlumnoMiniSerializer(serializers.ModelSerializer):
     def get_nombre_completo(self, obj):
         """Concatena nombres y apellidos del alumno desde Persona."""
         persona = obj.persona
-        return f"{persona.nombres} {persona.apellido_uno}"
+        if not persona:
+            return None
+        return f"{persona.nombres} {persona.apellido_uno}".strip()
