@@ -8,11 +8,17 @@ from .serializers import CursoSerializer, AlumnoMiniSerializer
 
 
 class CursoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar cursos.
+    - Todos los roles (excepto apoderado) pueden listar y ver cursos.
+    - El profesor puede consultar sus cursos y los alumnos de sus cursos.
+    - Endpoint adicional: /api/cursos/<id>/alumnos
+    """
     permission_classes = [IsAuthenticated]
     serializer_class = CursoSerializer
 
     def get_queryset(self):
-        """Filtra los cursos visibles según el rol del usuario autenticado."""
+        """Devuelve los cursos visibles según el rol del usuario."""
         user = self.request.user
         rol = getattr(user, 'rol', '').lower()
 
@@ -22,23 +28,30 @@ class CursoViewSet(viewsets.ModelViewSet):
             .prefetch_related('alumnos__persona')
         )
 
-        # Si es profesor, solo sus cursos
-        if rol == 'profesor' and hasattr(user, 'persona'):
-            return queryset.filter(profesor=user.persona)
+        # 🔹 Solo apoderado no puede ver cursos
+        if rol == 'apoderado':
+            return Curso.objects.none()
 
-        # Si es admin, ayudante o staff, ve todos los cursos
-        if rol in ['admin', 'ayudante', 'inspector', 'porteria', 'subdirector'] or user.is_staff:
-            return queryset.all()
-
-        # Otros roles no ven cursos
-        return Curso.objects.none()
+        # 🔹 Profesor, admin, portería, ayudante, etc. pueden ver todos los cursos
+        return queryset.all()
 
     @action(detail=True, methods=['get'], url_path='alumnos')
     def alumnos_del_curso(self, request, pk=None):
         """
         Devuelve los alumnos asociados a un curso específico.
-        Soporta paginación con ?limit=10&offset=0
+        Solo roles no apoderados pueden acceder.
+        Soporta paginación local (20 por defecto).
         """
+        user = self.request.user
+        rol = getattr(user, 'rol', '').lower()
+
+        # Apoderado no puede acceder
+        if rol == 'apoderado':
+            return Response(
+                {'detail': 'No tienes permiso para ver los alumnos de un curso.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         try:
             curso = self.get_object()
         except Curso.DoesNotExist:
@@ -49,17 +62,18 @@ class CursoViewSet(viewsets.ModelViewSet):
 
         alumnos = curso.alumnos.select_related('persona').all()
 
-        # Si no hay alumnos
+        #Si el curso no tiene alumnos
         if not alumnos.exists():
             return Response(
                 {'detail': 'Este curso aún no tiene alumnos registrados.', 'results': []},
                 status=status.HTTP_200_OK
             )
 
-        # Aplica paginación si hay muchos alumnos
+        # Paginación local (solo para este endpoint)
         paginator = LimitOffsetPagination()
+        paginator.default_limit = 20  #cantidad por defecto
+        paginator.max_limit = 100     #máximo permitido
         paginated_alumnos = paginator.paginate_queryset(alumnos, request)
-        serializer = AlumnoMiniSerializer(paginated_alumnos, many=True)
 
-        # Devuelve respuesta paginada (DRF incluye count, next, previous)
+        serializer = AlumnoMiniSerializer(paginated_alumnos, many=True)
         return paginator.get_paginated_response(serializer.data)
