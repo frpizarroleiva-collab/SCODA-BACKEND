@@ -14,6 +14,7 @@ from escuela.views import CursoViewSet
 from personas.views import PersonaViewSet
 from establecimientos.views import EstablecimientoViewSet
 from alumnos.views import AlumnoViewSet, PersonaAutorizadaAlumnoViewSet
+from estados.views import EstadoAlumnoViewSet
 
 #Configuración del router
 router = DefaultRouter(trailing_slash=False)
@@ -23,6 +24,7 @@ router.register(r'personas', PersonaViewSet, basename='persona')
 router.register(r'establecimientos', EstablecimientoViewSet, basename='establecimiento')
 router.register(r'alumnos', AlumnoViewSet, basename='alumno')
 router.register(r'autorizados', PersonaAutorizadaAlumnoViewSet, basename='autorizado')
+router.register(r'estado-alumnos', EstadoAlumnoViewSet, basename='estado-alumno')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

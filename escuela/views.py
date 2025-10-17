@@ -1,39 +1,44 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from .models import Curso
-from .serializers import CursoSerializer, CursoConAlumnosSerializer
+from .serializers import CursoSerializer, AlumnoMiniSerializer
 
 
 class CursoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    serializer_class = CursoSerializer  # ahora solo usamos el serializer base
 
     def get_queryset(self):
         user = self.request.user
+        rol = getattr(user, 'rol', '').lower()
 
-        # 👇 Trae los cursos con todos los datos relacionados en una sola consulta
         queryset = (
             Curso.objects
             .select_related('profesor', 'establecimiento')
-            .prefetch_related('alumnos__persona')  # ⚡ optimiza carga de alumnos y sus personas
+            .prefetch_related('alumnos__persona')
         )
 
-        # 👇 Si el usuario es profesor → solo sus cursos
-        if hasattr(user, 'persona') and getattr(user, 'rol', None) == 'profesor':
-            queryset = queryset.filter(profesor=user.persona)
+        if rol == 'profesor' and hasattr(user, 'persona'):
+            return queryset.filter(profesor=user.persona)
+        elif rol in ['admin', 'ayudante', 'inspector', 'porteria', 'subdirector'] or user.is_staff:
+            return queryset.all()
+        return Curso.objects.none()
 
-        # 👇 Si es admin → todos los cursos
-        elif getattr(user, 'rol', None) == 'ADMIN' or user.is_staff:
-            queryset = queryset.all()
+    @action(detail=True, methods=['get'], url_path='alumnos')
+    def alumnos_del_curso(self, request, pk=None):
+        """Devuelve los alumnos asociados a un curso específico."""
+        try:
+            curso = self.get_object()
+        except Curso.DoesNotExist:
+            return Response({'detail': 'Curso no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # 👇 Otros roles (apoderados, portería, etc.) → nada
-        else:
-            queryset = Curso.objects.none()
+        alumnos = curso.alumnos.select_related('persona').all()
 
-        return queryset
+        # si no hay alumnos, devuelve lista vacía
+        if not alumnos.exists():
+            return Response([], status=status.HTTP_200_OK)
 
-    def get_serializer_class(self):
-        # 👇 Cuando es lectura (listar o ver detalle) mostramos los alumnos también
-        if self.action in ['list', 'retrieve']:
-            return CursoConAlumnosSerializer
-        # 👇 Para crear o editar usamos el serializer simple
-        return CursoSerializer
+        serializer = AlumnoMiniSerializer(alumnos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

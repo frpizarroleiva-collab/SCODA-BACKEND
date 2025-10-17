@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'ubicacion',
     'accounts.apps.AccountsConfig',
     'notificaciones',
-    'auditoria'
+    'auditoria',
+    'estados'
 ]
 
 MIDDLEWARE = [
