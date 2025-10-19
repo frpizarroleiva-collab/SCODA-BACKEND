@@ -20,21 +20,29 @@ class CursoViewSet(viewsets.ModelViewSet):
             .select_related('profesor', 'establecimiento')
             .prefetch_related('alumnos__persona')
         )
+
+        # Los apoderados no pueden listar cursos
         if rol == 'apoderado':
             return Curso.objects.none()
+
         return queryset.all()
 
     @action(detail=True, methods=['get'], url_path='alumnos')
     def alumnos_del_curso(self, request, pk=None):
+        """
+        Devuelve los alumnos asociados a un curso específico.
+        Solo roles distintos de 'apoderado' pueden acceder.
+        """
         user = self.request.user
         rol = getattr(user, 'rol', '').lower()
 
-        # Apoderado no puede acceder
+        # Bloquear acceso a apoderados
         if rol == 'apoderado':
             return Response(
                 {'detail': 'No tienes permiso para ver los alumnos de un curso.'},
                 status=status.HTTP_403_FORBIDDEN
             )
+
         try:
             curso = self.get_object()
         except Curso.DoesNotExist:
@@ -44,6 +52,7 @@ class CursoViewSet(viewsets.ModelViewSet):
             )
 
         alumnos = curso.alumnos.select_related('persona').all()
+
         if not alumnos.exists():
             return Response(
                 {'detail': 'Este curso aún no tiene alumnos registrados.', 'results': []},
@@ -54,5 +63,5 @@ class CursoViewSet(viewsets.ModelViewSet):
         paginator.max_limit = 100
         paginated_alumnos = paginator.paginate_queryset(alumnos, request)
 
-        serializer = c(paginated_alumnos, many=True)
+        serializer = AlumnoMiniSerializer(paginated_alumnos, many=True)
         return paginator.get_paginated_response(serializer.data)
