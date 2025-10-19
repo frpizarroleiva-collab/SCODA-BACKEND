@@ -1,43 +1,165 @@
 from rest_framework import serializers
+from django.db import transaction
 from .models import Usuario
+from personas.models import Persona
+from ubicacion.models import Comuna, Pais
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    # Campos adicionales relacionados con Persona
+    password = serializers.CharField(write_only=True, required=False)
     username = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    run = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
+    fono = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    comuna = serializers.IntegerField(required=False, allow_null=True)
+    pais_nacionalidad = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = Usuario
         fields = [
             'id', 'first_name', 'last_name', 'username',
-            'email', 'password', 'rol', 'is_active', 'creado_en'
+            'email', 'password', 'rol', 'is_active', 'creado_en',
+            'run', 'fecha_nacimiento', 'fono', 'comuna', 'pais_nacionalidad'
         ]
         read_only_fields = ['id', 'creado_en']
 
+    # --------------------------------------------------
+    # VALIDACIONES
+    # --------------------------------------------------
     def validate_email(self, value):
-        if Usuario.objects.filter(email=value).exists():
+        """Evita duplicidad de correo electrónico."""
+        if self.instance is None and Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError('Este Email ya se encuentra registrado, prueba con otro')
         return value
 
-    def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = Usuario(**validated_data)
-        user.set_password(password)  # encripta antes de guardar
-        user.save()
-        return user
+    def validate(self, attrs):
+        """Valida duplicidad de RUN antes de crear usuario."""
+        run = attrs.get('run')
+        if run and Persona.objects.filter(run=run).exists():
+            raise serializers.ValidationError({'run': f'El RUN {run} ya está asociado a otra persona.'})
+        return attrs
 
-    def update(self, instance, validated_data):
+    # --------------------------------------------------
+    # CREACIÓN DE USUARIO (con transacción)
+    # --------------------------------------------------
+    def create(self, validated_data):
+        persona_data = {
+            'run': validated_data.pop('run', None),
+            'fecha_nacimiento': validated_data.pop('fecha_nacimiento', None),
+            'fono': validated_data.pop('fono', None),
+            'comuna': validated_data.pop('comuna', None),
+            'pais_nacionalidad': validated_data.pop('pais_nacionalidad', None),
+        }
+
         password = validated_data.pop('password', None)
+
+        # Asegurar que el username no quede vacío
+        if not validated_data.get('username'):
+            validated_data['username'] = validated_data.get('email')
+
+        with transaction.atomic():
+            user = Usuario(**validated_data)
+            if password:
+                user.set_password(password)
+            user.save()
+
+            # Si el signal ya creó la Persona, actualiza sus campos
+            persona = getattr(user, 'persona', None)
+            if persona:
+                self._actualizar_persona(persona, persona_data, user)
+                persona.refresh_from_db()  # fuerza lectura actualizada desde la BD
+
+        return {
+            "message": "Usuario y Persona creados correctamente",
+            "user": self._usuario_response(user, persona)
+        }
+
+    # --------------------------------------------------
+    # ACTUALIZACIÓN DE USUARIO Y PERSONA
+    # --------------------------------------------------
+    def update(self, instance, validated_data):
+        persona_data = {
+            'run': validated_data.pop('run', None),
+            'fecha_nacimiento': validated_data.pop('fecha_nacimiento', None),
+            'fono': validated_data.pop('fono', None),
+            'comuna': validated_data.pop('comuna', None),
+            'pais_nacionalidad': validated_data.pop('pais_nacionalidad', None),
+        }
+
+        password = validated_data.pop('password', None)
+
+        # Asegurar que el username no quede vacío
+        if not validated_data.get('username'):
+            validated_data['username'] = validated_data.get('email', instance.username)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
             instance.set_password(password)
         instance.save()
-        return instance
+
+        persona = getattr(instance, 'persona', None)
+        if persona:
+            self._actualizar_persona(persona, persona_data, instance)
+
+        return {
+            "message": "Usuario y Persona actualizados correctamente",
+            "user": self._usuario_response(instance, persona)
+        }
+
+    # --------------------------------------------------
+    # MÉTODOS AUXILIARES
+    # --------------------------------------------------
+    def _actualizar_persona(self, persona, data, usuario):
+        """Sincroniza campos entre Usuario y Persona."""
+        updated = False
+
+        if persona.nombres != (usuario.first_name or ''):
+            persona.nombres = usuario.first_name or ''
+            updated = True
+        if persona.apellido_uno != (usuario.last_name or ''):
+            persona.apellido_uno = usuario.last_name or ''
+            updated = True
+
+        for attr, value in data.items():
+            if value is not None:
+                if attr in ['comuna', 'pais_nacionalidad']:
+                    Model = Comuna if attr == 'comuna' else Pais
+                    try:
+                        value = Model.objects.get(pk=value)
+                    except Model.DoesNotExist:
+                        value = None
+                setattr(persona, attr, value)
+                updated = True
+
+        if updated:
+            persona.save()
+
+    def _usuario_response(self, user, persona=None):
+        """Retorna diccionario unificado de Usuario + Persona."""
+        return {
+            "id": str(user.id),
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "username": user.username,
+            "email": user.email,
+            "rol": user.rol,
+            "is_active": user.is_active,
+            "creado_en": user.creado_en,
+            "run": persona.run if persona else None,
+            "fecha_nacimiento": persona.fecha_nacimiento if persona else None,
+            "fono": persona.fono if persona else None,
+            "comuna": persona.comuna.id if persona and persona.comuna else None,
+            "pais_nacionalidad": persona.pais_nacionalidad.id if persona and persona.pais_nacionalidad else None,
+        }
 
 
+# --------------------------------------------------------------------
+# PERFIL SERIALIZER
+# --------------------------------------------------------------------
 class PerfilSerializer(serializers.ModelSerializer):
     abreviado = serializers.SerializerMethodField()
 
@@ -58,24 +180,28 @@ class PerfilSerializer(serializers.ModelSerializer):
         return f"{nombre}{iniciales}".strip() if nombre or iniciales else None
 
 
+# --------------------------------------------------------------------
+# LOGIN CON TOKEN JWT
+# --------------------------------------------------------------------
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # añadir info extra al token
         token['rol'] = user.rol
         token['email'] = user.email
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        # hora de la última conexión
         self.user.last_login = timezone.now()
         self.user.save(update_fields=["last_login"])
-        # devolver también el rol al hacer login
-        data['user'] = PerfilSerializer(self.user).data  
+        data['user'] = PerfilSerializer(self.user).data
         return data
 
+
+# --------------------------------------------------------------------
+# RESET PASSWORD SERIALIZER
+# --------------------------------------------------------------------
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(min_length=6, write_only=True)

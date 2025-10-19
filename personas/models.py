@@ -10,7 +10,7 @@ class Persona(models.Model):
         null=True,
         related_name='persona'
     )
-    run = models.CharField(max_length=12, unique=True)
+    run = models.CharField(max_length=12, unique=True, blank=True, null=True)
     nombres = models.CharField(max_length=120)
     apellido_uno = models.CharField(max_length=120)
     apellido_dos = models.CharField(max_length=120, blank=True, null=True)
@@ -37,6 +37,11 @@ class Persona(models.Model):
     def __str__(self):
         return f"{self.nombres} {self.apellido_uno} ({self.run})"
 
+    def save(self, *args, **kwargs):
+        # Si el run llega como string vacío '', lo convierte a None (NULL real)
+        if self.run == '':
+            self.run = None
+        super().save(*args, **kwargs)
 
 class DocumentoIdentidad(models.Model):
     persona = models.ForeignKey(

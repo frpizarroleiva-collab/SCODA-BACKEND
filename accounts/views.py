@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,45 +22,91 @@ from notificaciones.models import Notificacion
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
+    """
+    API CRUD principal para usuarios SCODA.
+    - Crea/actualiza Usuario y Persona desde el mismo endpoint.
+    - Admin puede listar, crear, editar o eliminar.
+    - Usuarios normales solo ven o editan su propio perfil.
+    """
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
     lookup_field = "email"
     lookup_value_regex = "[^/]+"
 
+    # -----------------------------
+    # PERMISOS DINÁMICOS
+    # -----------------------------
     def get_permissions(self):
         if self.action in ['reset_password_confirm']:
-            return [AllowAny()]  # token asegura el acceso
+            return [AllowAny()]  # acceso público con token
         if self.action in ['reset_password']:
-            return [HasAPIKey()]
+            return [HasAPIKey()]  # API Key + email + pass
         if self.action in ['list', 'create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminUser()]
-        return [IsAuthenticated()]
+            return [IsAdminUser()]  # solo admin
+        return [IsAuthenticated()]  # por defecto autenticado
 
+    # -----------------------------
+    # QUERYSET FILTRADO POR ROL
+    # -----------------------------
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff:
+        if user.is_staff or user.rol == 'admin':
             return Usuario.objects.all()
+        # usuarios normales solo ven su perfil
         return Usuario.objects.filter(id=user.id)
 
-    # Buscar usuario por email (solo admin)
-    def buscar_por_email(self, request):
-        email = request.query_params.get('email')
-        if not email:
-            return Response({"error": "Debes enviar un email"}, status=400)
-        try:
-            usuario = Usuario.objects.get(email=email)
-            serializer = self.get_serializer(usuario)
-            return Response(serializer.data)
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
+    # -----------------------------
+    # CREAR USUARIO
+    # -----------------------------
+    def create(self, request, *args, **kwargs):
+        """
+        Crea usuario + persona automáticamente.
+        Si ya existe, devuelve error 400.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()  # devuelve dict {"message": ..., "user": {...}}
 
-    # Reset password clásico (requiere email + nueva pass)
+        message = result.get("message", "Usuario y Persona creados correctamente")
+        user_data = result.get("user", {})
+
+        return Response(
+            {"message": message, "user": user_data},
+            status=status.HTTP_201_CREATED
+        )
+
+    # -----------------------------
+    # ACTUALIZAR USUARIO
+    # -----------------------------
+    def update(self, request, *args, **kwargs):
+        """
+        Actualiza Usuario y sincroniza Persona automáticamente.
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()  # también devuelve dict {"message": ..., "user": {...}}
+
+        message = result.get("message", "Usuario y Persona actualizados correctamente")
+        user_data = result.get("user", {})
+
+        return Response(
+            {"message": message, "user": user_data},
+            status=status.HTTP_200_OK
+        )
+
+    # -----------------------------
+    # RESET PASSWORD (ADMIN O SERVICIO)
+    # -----------------------------
     @action(detail=False, methods=['post'], url_path='reset-password')
     def reset_password(self, request):
+        """
+        Permite cambiar contraseña directamente mediante API Key (admin o sistema).
+        """
         serializer = ResetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         email = serializer.validated_data["email"]
         new_password = serializer.validated_data["password"]
 
@@ -72,13 +118,11 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
 
-        # Notificación
         Notificacion.objects.create(
             usuario=user,
             mensaje=f"La contraseña de {user.email} ha sido cambiada"
         )
 
-        # Correo de confirmación
         send_mail(
             subject="Cambio de contraseña en SCODA",
             message=(
@@ -87,15 +131,20 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 f"Si no realizaste este cambio, contacta al administrador.\n\n"
                 f"Saludos,\nEquipo SCODA"
             ),
-            from_email=None,  # usa DEFAULT_FROM_EMAIL
+            from_email=None,
             recipient_list=[user.email],
             fail_silently=False,
         )
         return Response({"message": "Contraseña actualizada con éxito"}, status=200)
 
-    # Confirmar reset con link único (uid + token + pass1 + pass2)
+    # -----------------------------
+    # RESET PASSWORD CONFIRM (LINK)
+    # -----------------------------
     @action(detail=False, methods=['post'], url_path='reset-password-confirm')
     def reset_password_confirm(self, request):
+        """
+        Permite definir la contraseña usando UID y TOKEN desde el correo.
+        """
         uidb64 = request.data.get("uid")
         token = request.data.get("token")
         password1 = request.data.get("password1")
@@ -103,7 +152,6 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         if not uidb64 or not token or not password1 or not password2:
             return Response({"error": "Faltan parámetros"}, status=400)
-
         if password1 != password2:
             return Response({"error": "Las contraseñas no coinciden"}, status=400)
 
@@ -116,17 +164,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if not default_token_generator.check_token(user, token):
             return Response({"error": "El enlace ha expirado o es inválido"}, status=400)
 
-        # Guardar nueva contraseña
         user.set_password(password1)
         user.save()
 
-        # Notificación
         Notificacion.objects.create(
             usuario=user,
             mensaje=f"El usuario {user.email} definió su contraseña con link"
         )
 
-        # Correo de confirmación
         send_mail(
             subject="Contraseña definida en SCODA",
             message=(
@@ -135,7 +180,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 f"Si no realizaste este proceso, contacta al administrador.\n\n"
                 f"Saludos,\nEquipo SCODA"
             ),
-            from_email=None,  # usa DEFAULT_FROM_EMAIL
+            from_email=None,
             recipient_list=[user.email],
             fail_silently=False,
         )
@@ -143,6 +188,9 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         return Response({"message": "Contraseña creada con éxito"}, status=200)
 
 
+# -----------------------------
+# PERFIL DEL USUARIO ACTUAL
+# -----------------------------
 class PerfilView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -151,18 +199,22 @@ class PerfilView(APIView):
         return Response(serializer.data)
 
 
+# -----------------------------
+# LOGIN PERSONALIZADO (JWT)
+# -----------------------------
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [HasAPIKey]
 
 
-# Nueva vista: renderiza formulario HTML
+# -----------------------------
+# FORMULARIOS HTML PARA RESET PASSWORD
+# -----------------------------
 class ResetPasswordFormView(View):
     def get(self, request, uid, token):
         return render(request, "reset_password_form.html", {"uid": uid, "token": token})
 
 
-# Nueva vista: mensaje final tras éxito
 class ResetPasswordDoneView(View):
     def get(self, request):
         return render(request, "reset_password_done.html")

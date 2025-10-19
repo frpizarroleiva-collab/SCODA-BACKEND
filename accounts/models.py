@@ -5,7 +5,6 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 
 class UsuarioManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
-        """Crear usuario normal"""
         if not email:
             raise ValueError("El usuario debe tener un email válido")
         email = self.normalize_email(email)

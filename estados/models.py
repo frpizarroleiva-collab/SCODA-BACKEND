@@ -8,7 +8,7 @@ class EstadoAlumno(models.Model):
         ('AUSENTE', 'Ausente'),
         ('RETIRADO', 'Retirado'),
         ('JUSTIFICADO', 'Justificado'),
-        ('EXTENSION', 'Extension'),
+        ('EXTENSION', 'Extensión'),
     ]
 
     alumno = models.ForeignKey(
@@ -21,7 +21,7 @@ class EstadoAlumno(models.Model):
         on_delete=models.CASCADE,
         related_name='estados'
     )
-    fecha = fecha = models.DateField()
+    fecha = models.DateField()
     estado = models.CharField(max_length=20, choices=ESTADOS_CHOICES)
     hora_registro = models.DateTimeField(auto_now=True)
     usuario_registro = models.ForeignKey(
@@ -38,6 +38,41 @@ class EstadoAlumno(models.Model):
         verbose_name = 'Estado de Alumno'
         verbose_name_plural = 'Estados de Alumnos'
         unique_together = ('alumno', 'curso', 'fecha')
+
+    def __str__(self):
+        return f"{self.alumno.persona.nombres} - {self.estado} ({self.fecha})"
+
+
+class HistorialEstadoAlumno(models.Model):
+    estado_alumno = models.ForeignKey(
+        'estados.EstadoAlumno',
+        on_delete=models.CASCADE,
+        related_name='historiales'
+    )
+    alumno = models.ForeignKey(
+        'alumnos.Alumno',
+        on_delete=models.CASCADE
+    )
+    curso = models.ForeignKey(
+        'escuela.Curso',
+        on_delete=models.CASCADE
+    )
+    fecha = models.DateField()
+    estado = models.CharField(max_length=20)
+    observacion = models.TextField(blank=True, null=True)
+    usuario_registro = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    hora_cambio = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'historial_estado_alumno'
+        verbose_name = 'Historial de Estado de Alumno'
+        verbose_name_plural = 'Historiales de Estados de Alumnos'
+        ordering = ['-hora_cambio']
 
     def __str__(self):
         return f"{self.alumno.persona.nombres} - {self.estado} ({self.fecha})"
