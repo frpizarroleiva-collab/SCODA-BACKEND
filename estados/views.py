@@ -53,11 +53,6 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'], url_path='actualizar')
     def actualizar_estados(self, request):
-        """
-        Actualiza o crea estados por curso y fecha.
-        Si ya existe el registro (mismo alumno, curso y fecha), lo actualiza.
-        Además, guarda cada acción en la tabla HistorialEstadoAlumno.
-        """
         user = request.user
         curso_id = request.data.get('curso_id')
         registros = request.data.get('registros', [])

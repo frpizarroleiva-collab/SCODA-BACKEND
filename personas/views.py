@@ -26,6 +26,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 "existe": False,
                 "mensaje": "Debes enviar un RUN en el body"
             }, status=status.HTTP_400_BAD_REQUEST)
+
         run = run.replace(".", "").replace(" ", "").upper()
         print(f"RUN recibido: '{run}'")
 
@@ -47,28 +48,25 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 }
                 for a in alumnos
             ]
-            autorizaciones_qs = PersonaAutorizadaAlumno.objects.filter(
-                persona=persona
-            ).exclude(tipo_relacion='apoderado')
             autorizaciones_data = [
                 {
-                    "id": aut.id,
-                    "alumno": aut.alumno.persona.nombres,
-                    "curso": aut.alumno.curso.nombre if aut.alumno.curso else None,
-                    "tipo_relacion": aut.tipo_relacion
+                    "id": rel.id,
+                    "alumno": f"{rel.alumno.persona.nombres} {rel.alumno.persona.apellido_uno} {rel.alumno.persona.apellido_dos or ''}".strip(),
+                    "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
+                    "tipo_relacion": rel.tipo_relacion
                 }
-                for aut in autorizaciones_qs
+                for rel in apoderados_qs
             ]
-            mensaje_autorizado = (
-                "Autorizado" if autorizaciones_qs.exists() else "No está autorizado"
-            )
+            es_apoderado = len(alumnos) > 0
+            es_autorizado = es_apoderado
+            mensaje_autorizado = "Autorizado" if es_autorizado else "No está autorizado"
 
             return Response({
                 "existe": True,
                 "persona": serializer.data,
-                "es_apoderado": len(alumnos) > 0,
+                "es_apoderado": es_apoderado,
                 "alumnos_asociados": alumnos_data,
-                "es_autorizado": autorizaciones_qs.exists(),
+                "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
                 "alumnos_autorizados": autorizaciones_data
             }, status=status.HTTP_200_OK)

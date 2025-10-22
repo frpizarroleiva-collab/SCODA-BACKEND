@@ -3,8 +3,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
+from django.db.models import OuterRef, Subquery
 from .models import Curso
-from .serializers import CursoSerializer, AlumnoMiniSerializer
+from .serializers import CursoSerializer
+from alumnos.models import Alumno
+from estados.models import EstadoAlumno
 
 
 class CursoViewSet(viewsets.ModelViewSet):
@@ -29,10 +32,6 @@ class CursoViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='alumnos')
     def alumnos_del_curso(self, request, pk=None):
-        """
-        Devuelve los alumnos asociados a un curso específico.
-        Solo roles distintos de 'apoderado' pueden acceder.
-        """
         user = self.request.user
         rol = getattr(user, 'rol', '').lower()
 
@@ -51,17 +50,36 @@ class CursoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        alumnos = curso.alumnos.select_related('persona').all()
+        alumnos = Alumno.objects.filter(curso=curso).select_related('persona')
 
         if not alumnos.exists():
             return Response(
                 {'detail': 'Este curso aún no tiene alumnos registrados.', 'results': []},
                 status=status.HTTP_200_OK
             )
+        subquery = EstadoAlumno.objects.filter(alumno=OuterRef('pk')).order_by('-fecha', '-id')
+        alumnos = alumnos.annotate(
+            estado_actual=Subquery(subquery.values('estado')[:1]),
+            observacion=Subquery(subquery.values('observacion')[:1]),
+            estado_actual_at=Subquery(subquery.values('fecha')[:1]),
+        )
         paginator = LimitOffsetPagination()
         paginator.default_limit = 20
         paginator.max_limit = 100
         paginated_alumnos = paginator.paginate_queryset(alumnos, request)
+        data = [
+            {
+                "id": a.id,
+                "nombre_completo": f"{a.persona.nombres} {a.persona.apellido_uno}",
+                "rut": a.persona.run,
+                "estado_actual": a.estado_actual or "SIN REGISTRO",
+                "observacion": a.observacion or "",
+                "estado_actual_at": (
+                    a.estado_actual_at.strftime("%Y-%m-%d %H:%M:%S")
+                    if a.estado_actual_at else None
+                ),
+            }
+            for a in paginated_alumnos
+        ]
 
-        serializer = AlumnoMiniSerializer(paginated_alumnos, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        return paginator.get_paginated_response(data)
