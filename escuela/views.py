@@ -24,7 +24,7 @@ class CursoViewSet(viewsets.ModelViewSet):
             .prefetch_related('alumnos__persona')
         )
 
-        # Los apoderados no pueden listar cursos
+        # condicion apoderado no lista curso
         if rol == 'apoderado':
             return Curso.objects.none()
 

@@ -38,7 +38,6 @@ class Persona(models.Model):
         return f"{self.nombres} {self.apellido_uno} ({self.run})"
 
     def save(self, *args, **kwargs):
-        # Si el run llega como string vacío '', lo convierte a None (NULL real)
         if self.run == '':
             self.run = None
         super().save(*args, **kwargs)

@@ -5,8 +5,6 @@ from accounts.permiso import HasAPIKey
 from .models import Alumno, PersonaAutorizadaAlumno
 from .serializers import AlumnoSerializer
 
-
-# 🔹 1. CRUD principal de alumnos
 class AlumnoViewSet(viewsets.ModelViewSet):
     """
     CRUD de alumnos con relaciones a Persona, Curso y Personas Autorizadas.
@@ -15,12 +13,7 @@ class AlumnoViewSet(viewsets.ModelViewSet):
     serializer_class = AlumnoSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
 
-
-# 🔹 2. CRUD para personas autorizadas (apoderados o terceros)
 class PersonaAutorizadaAlumnoViewSet(viewsets.ModelViewSet):
-    """
-    Permite registrar, listar o eliminar personas autorizadas para retirar alumnos.
-    """
     queryset = PersonaAutorizadaAlumno.objects.all()
     permission_classes = [IsAuthenticated, HasAPIKey]
 

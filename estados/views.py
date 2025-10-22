@@ -16,7 +16,7 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso')
 
-        # Filtros opcionales
+        # Filtros
         curso_id = self.request.query_params.get('curso_id')
         fecha_str = self.request.query_params.get('fecha')
         desde_str = self.request.query_params.get('desde')
@@ -66,8 +66,7 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Formato de fecha inválido. Use YYYY-MM-DD.'}, status=400)
         else:
             fecha = date.today()
-
-        # Validar parámetros mínimos
+            
         if not curso_id or not registros:
             return Response({'error': 'curso_id y registros son requeridos'}, status=400)
 
@@ -80,7 +79,7 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
             if not alumno_id or not estado:
                 continue
 
-            # Actualizar o crear registro principal
+            # Actualizar o crear registro
             obj, created = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
                 curso_id=curso_id,
@@ -118,11 +117,6 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
         )
     @action(detail=False, methods=['get'], url_path='historial')
     def historial(self, request):
-        """
-        Devuelve el historial de cambios por alumno, curso o fecha.
-        Ejemplo:
-        /api/estado-alumnos/historial/?alumno_id=1&curso_id=2&fecha=2025-10-18
-        """
         alumno_id = request.query_params.get('alumno_id')
         curso_id = request.query_params.get('curso_id')
         fecha_str = request.query_params.get('fecha')

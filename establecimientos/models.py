@@ -5,17 +5,17 @@ class Establecimiento(models.Model):
     nombre = models.CharField(max_length=200)
     direccion = models.CharField(max_length=250, blank=True, null=True)
     comuna = models.ForeignKey(
-        'ubicacion.Comuna',          # corregido: Comuna vive en ubicacion
+        'ubicacion.Comuna',    
         on_delete=models.DO_NOTHING
     )
     entidad_admin = models.ForeignKey(
-        'establecimientos.EntidadAdmin',  # sigue en este mismo app
+        'establecimientos.EntidadAdmin',
         on_delete=models.DO_NOTHING,
         blank=True,
         null=True
     )
 
-    class Meta:   # tabla ya existe en PostgreSQL
+    class Meta: 
         db_table = 'establecimiento'
 
     def __str__(self):

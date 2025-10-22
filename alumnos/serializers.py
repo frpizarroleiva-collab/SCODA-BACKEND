@@ -20,7 +20,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
         many=True,
         required=False
     )
-
     class Meta:
         model = Alumno
         fields = ["id", "persona", "curso", "personas_autorizadas"]

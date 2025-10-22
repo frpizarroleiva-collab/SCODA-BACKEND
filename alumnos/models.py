@@ -33,7 +33,7 @@ class PersonaAutorizadaAlumno(models.Model):
         on_delete=models.CASCADE,
         related_name="autorizaciones"
     )
-    tipo_relacion = models.CharField(max_length=80)  # ej: madre, padre, tutor, tía, etc.
+    tipo_relacion = models.CharField(max_length=80)  #apoderado
     autorizado = models.BooleanField(default=True)
 
     class Meta:

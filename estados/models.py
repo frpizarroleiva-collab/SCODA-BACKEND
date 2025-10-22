@@ -4,10 +4,8 @@ from django.conf import settings
 
 class EstadoAlumno(models.Model):
     ESTADOS_CHOICES = [
-        ('PRESENTE', 'Presente'),
         ('AUSENTE', 'Ausente'),
         ('RETIRADO', 'Retirado'),
-        ('JUSTIFICADO', 'Justificado'),
         ('EXTENSION', 'Extensión'),
     ]
 

@@ -11,14 +11,9 @@ from alumnos.models import PersonaAutorizadaAlumno
 class PersonaViewSet(viewsets.ModelViewSet):
     queryset = Persona.objects.all()
     serializer_class = PersonaSerializer
-    permission_classes = [IsAuthenticated, HasAPIKey]  # Protección global
+    permission_classes = [IsAuthenticated, HasAPIKey]
 
-    @action(
-        detail=False,
-        methods=['post'],
-        url_path='validar-run',
-        permission_classes=[IsAuthenticated, HasAPIKey]
-    )
+    @action(detail=False,methods=['post'],url_path='validar-run',permission_classes=[IsAuthenticated, HasAPIKey])
     def validar_run(self, request):
         run = request.data.get("run")
         if not run:

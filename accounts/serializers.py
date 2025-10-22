@@ -26,25 +26,20 @@ class UsuarioSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'creado_en']
 
-    # --------------------------------------------------
     # VALIDACIONES
-    # --------------------------------------------------
+
     def validate_email(self, value):
-        """Evita duplicidad de correo electrónico."""
         if self.instance is None and Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError('Este Email ya se encuentra registrado, prueba con otro')
         return value
 
     def validate(self, attrs):
-        """Valida duplicidad de RUN antes de crear usuario."""
         run = attrs.get('run')
         if run and Persona.objects.filter(run=run).exists():
             raise serializers.ValidationError({'run': f'El RUN {run} ya está asociado a otra persona.'})
         return attrs
 
-    # --------------------------------------------------
     # CREACIÓN DE USUARIO (con transacción)
-    # --------------------------------------------------
     def create(self, validated_data):
         persona_data = {
             'run': validated_data.pop('run', None),
@@ -53,10 +48,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'comuna': validated_data.pop('comuna', None),
             'pais_nacionalidad': validated_data.pop('pais_nacionalidad', None),
         }
-
         password = validated_data.pop('password', None)
 
-        # Asegurar que el username no quede vacío
         if not validated_data.get('username'):
             validated_data['username'] = validated_data.get('email')
 
@@ -65,21 +58,17 @@ class UsuarioSerializer(serializers.ModelSerializer):
             if password:
                 user.set_password(password)
             user.save()
-
-            # Si el signal ya creó la Persona, actualiza sus campos
             persona = getattr(user, 'persona', None)
             if persona:
                 self._actualizar_persona(persona, persona_data, user)
-                persona.refresh_from_db()  # fuerza lectura actualizada desde la BD
+                persona.refresh_from_db() 
 
         return {
             "message": "Usuario y Persona creados correctamente",
             "user": self._usuario_response(user, persona)
         }
-
-    # --------------------------------------------------
+        
     # ACTUALIZACIÓN DE USUARIO Y PERSONA
-    # --------------------------------------------------
     def update(self, instance, validated_data):
         persona_data = {
             'run': validated_data.pop('run', None),
@@ -109,10 +98,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "message": "Usuario y Persona actualizados correctamente",
             "user": self._usuario_response(instance, persona)
         }
-
-    # --------------------------------------------------
-    # MÉTODOS AUXILIARES
-    # --------------------------------------------------
+        
     def _actualizar_persona(self, persona, data, usuario):
         """Sincroniza campos entre Usuario y Persona."""
         updated = False
@@ -157,9 +143,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         }
 
 
-# --------------------------------------------------------------------
 # PERFIL SERIALIZER
-# --------------------------------------------------------------------
 class PerfilSerializer(serializers.ModelSerializer):
     abreviado = serializers.SerializerMethodField()
 
@@ -180,9 +164,7 @@ class PerfilSerializer(serializers.ModelSerializer):
         return f"{nombre}{iniciales}".strip() if nombre or iniciales else None
 
 
-# --------------------------------------------------------------------
 # LOGIN CON TOKEN JWT
-# --------------------------------------------------------------------
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -199,9 +181,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
-# --------------------------------------------------------------------
-# RESET PASSWORD SERIALIZER
-# --------------------------------------------------------------------
+
+# RESET PASSWORD
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(min_length=6, write_only=True)

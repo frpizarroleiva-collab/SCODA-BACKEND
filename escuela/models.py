@@ -5,7 +5,7 @@ class Curso(models.Model):
     nombre = models.CharField(max_length=120)
     nivel = models.IntegerField()
 
-    profesor = models.ForeignKey('personas.Persona',on_delete=models.SET_NULL,      # mejor que DO_NOTHING → si borras el profe, el curso no queda “roto”
+    profesor = models.ForeignKey('personas.Persona',on_delete=models.SET_NULL, 
         blank=True,
         null=True,
         related_name='cursos_dictados'
