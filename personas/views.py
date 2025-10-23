@@ -13,7 +13,12 @@ class PersonaViewSet(viewsets.ModelViewSet):
     serializer_class = PersonaSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
 
-    @action(detail=False,methods=['post'],url_path='validar-run',permission_classes=[IsAuthenticated, HasAPIKey])
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='validar-run',
+        permission_classes=[IsAuthenticated, HasAPIKey]
+    )
     def validar_run(self, request):
         run = request.data.get("run")
         if not run:
@@ -22,16 +27,24 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 "mensaje": "Debes enviar un RUN en el body"
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Limpieza y normalización del RUN
         run = run.replace(".", "").replace(" ", "").upper()
         print(f"RUN recibido: '{run}'")
 
         try:
             persona = Persona.objects.get(run__iexact=run)
             serializer = PersonaBasicaSerializer(persona)
+
+            # Todos los vínculos de tipo apoderado
             apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
                 persona=persona,
                 tipo_relacion='apoderado'
             )
+
+            # Solo los que están realmente autorizados
+            autorizados_qs = apoderados_qs.filter(autorizado=True)
+
+            # Información básica de los alumnos asociados
             alumnos = [rel.alumno for rel in apoderados_qs]
             alumnos_data = [
                 {
@@ -43,17 +56,22 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 }
                 for a in alumnos
             ]
+
+            # Lista detallada de autorizaciones (con flag real)
             autorizaciones_data = [
                 {
                     "id": rel.id,
                     "alumno": f"{rel.alumno.persona.nombres} {rel.alumno.persona.apellido_uno} {rel.alumno.persona.apellido_dos or ''}".strip(),
                     "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
-                    "tipo_relacion": rel.tipo_relacion
+                    "tipo_relacion": rel.tipo_relacion,
+                    "autorizado": rel.autorizado
                 }
                 for rel in apoderados_qs
             ]
-            es_apoderado = len(alumnos) > 0
-            es_autorizado = es_apoderado
+
+            # Evaluar correctamente los estados
+            es_apoderado = apoderados_qs.exists()
+            es_autorizado = autorizados_qs.exists()
             mensaje_autorizado = "Autorizado" if es_autorizado else "No está autorizado"
 
             return Response({
