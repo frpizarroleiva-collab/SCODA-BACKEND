@@ -16,31 +16,15 @@ from ubicacion.models import Comuna, Pais
 
 @receiver(post_save, sender=Usuario)
 def sincronizar_persona_y_notificar(sender, instance, created, **kwargs):
-    """
-    Signal que:
-    - Crea o vincula automáticamente una Persona cuando se crea un Usuario.
-    - Si ya existe Persona con el mismo RUN, la reutiliza.
-    - Si el RUN viene vacío o None, crea una Persona nueva con un AUTO-ID temporal.
-    - Si comuna/pais existen en la BD, se asignan; si no, quedan NULL.
-    - Envía correo y crea una notificación de bienvenida.
-    - Evita ejecutarse en actualizaciones (login, cambios de clave, etc.).
-    """
-
     if not created:
         return
 
     try:
-        # ------------------------------------------------
-        # Normalizar el RUN (evita duplicados vacíos)
-        # ------------------------------------------------
+        # Normalizar el RUN para evitar duplicados
         run = getattr(instance, 'run', None)
         run = run.strip() if isinstance(run, str) else run
         if not run:
-            run = None  # 🔒 fuerza valor nulo real
-
-        # ------------------------------------------------
-        # Buscar Persona existente por RUN (si lo hay)
-        # ------------------------------------------------
+            run = None
         if run and Persona.objects.filter(run=run).exists():
             persona = Persona.objects.get(run=run)
             if persona.usuario != instance:
@@ -50,9 +34,6 @@ def sincronizar_persona_y_notificar(sender, instance, created, **kwargs):
                 persona.save(update_fields=['usuario', 'nombres', 'apellido_uno'])
             persona_creada = False
         else:
-            # ------------------------------------------------
-            # Resolver comuna/pais solo si existen, sino dejar NULL
-            # ------------------------------------------------
             comuna_obj = None
             comuna_valor = getattr(instance, 'comuna', None)
             if comuna_valor:
@@ -63,9 +44,8 @@ def sincronizar_persona_y_notificar(sender, instance, created, **kwargs):
             if pais_valor:
                 pais_obj = Pais.objects.filter(pk=pais_valor).first()
 
-            # ------------------------------------------------
             # Crear nueva Persona
-            # ------------------------------------------------
+
             persona, persona_creada = Persona.objects.get_or_create(
                 usuario=instance,
                 defaults={
@@ -79,18 +59,13 @@ def sincronizar_persona_y_notificar(sender, instance, created, **kwargs):
                     'pais_nacionalidad': pais_obj,
                 }
             )
-
-        # ------------------------------------------------
         # Crear notificación de cuenta creada
-        # ------------------------------------------------
         Notificacion.objects.create(
             usuario=instance,
             mensaje=f"Se ha creado la cuenta para {instance.email}"
         )
 
-        # ------------------------------------------------
         # Envío de correo de bienvenida
-        # ------------------------------------------------
         uid = urlsafe_base64_encode(force_bytes(instance.pk))
         token = default_token_generator.make_token(instance)
         backend_url = getattr(settings, "BACKEND_URL", "http://127.0.0.1:8000")
@@ -134,9 +109,9 @@ def sincronizar_persona_y_notificar(sender, instance, created, **kwargs):
             fail_silently=False,
         )
 
-        print(f"✅ Usuario '{instance.email}' sincronizado con Persona '{persona.id}' y correo enviado.")
+        print(f"Usuario '{instance.email}' sincronizado con Persona '{persona.id}' y correo enviado.")
 
     except IntegrityError as e:
-        print(f"⚠️ Error de integridad al crear Persona para {instance.email}: {e}")
+        print(f"Error de integridad al crear Persona para {instance.email}: {e}")
     except Exception as e:
-        print(f"⚠️ Error inesperado en signal para {instance.email}: {e}")
+        print(f"Error inesperado en signal para {instance.email}: {e}")

@@ -5,7 +5,13 @@ from personas.models import Persona
 from ubicacion.models import Comuna, Pais
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
 
+
+# ==============================================================
+#                 USUARIO SERIALIZER
+# ==============================================================
 
 class UsuarioSerializer(serializers.ModelSerializer):
     # Campos adicionales relacionados con Persona
@@ -26,8 +32,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'creado_en']
 
+    # ----------------------------------------------------------
     # VALIDACIONES
-
+    # ----------------------------------------------------------
     def validate_email(self, value):
         if self.instance is None and Usuario.objects.filter(email=value).exists():
             raise serializers.ValidationError('Este Email ya se encuentra registrado, prueba con otro')
@@ -39,7 +46,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'run': f'El RUN {run} ya está asociado a otra persona.'})
         return attrs
 
+    # ----------------------------------------------------------
     # CREACIÓN DE USUARIO (con transacción)
+    # ----------------------------------------------------------
     def create(self, validated_data):
         persona_data = {
             'run': validated_data.pop('run', None),
@@ -50,6 +59,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
         }
         password = validated_data.pop('password', None)
 
+        # Si el rol es admin, activar automáticamente is_staff
+        rol = validated_data.get('rol', '').lower()
+        validated_data['is_staff'] = (rol == 'admin')
+
+        # Asegurar que username no quede vacío
         if not validated_data.get('username'):
             validated_data['username'] = validated_data.get('email')
 
@@ -61,14 +75,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
             persona = getattr(user, 'persona', None)
             if persona:
                 self._actualizar_persona(persona, persona_data, user)
-                persona.refresh_from_db() 
+                persona.refresh_from_db()
 
         return {
             "message": "Usuario y Persona creados correctamente",
             "user": self._usuario_response(user, persona)
         }
-        
+
+    # ----------------------------------------------------------
     # ACTUALIZACIÓN DE USUARIO Y PERSONA
+    # ----------------------------------------------------------
     def update(self, instance, validated_data):
         persona_data = {
             'run': validated_data.pop('run', None),
@@ -84,6 +100,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
         if not validated_data.get('username'):
             validated_data['username'] = validated_data.get('email', instance.username)
 
+        # Actualizar is_staff dinámicamente según el rol
+        rol = validated_data.get('rol', instance.rol).lower() if validated_data.get('rol') else instance.rol.lower()
+        instance.is_staff = (rol == 'admin')
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
@@ -98,7 +118,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "message": "Usuario y Persona actualizados correctamente",
             "user": self._usuario_response(instance, persona)
         }
-        
+
+    # ----------------------------------------------------------
+    # FUNCIONES AUXILIARES
+    # ----------------------------------------------------------
     def _actualizar_persona(self, persona, data, usuario):
         """Sincroniza campos entre Usuario y Persona."""
         updated = False
@@ -125,7 +148,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             persona.save()
 
     def _usuario_response(self, user, persona=None):
-        """Retorna diccionario unificado de Usuario + Persona."""
         return {
             "id": str(user.id),
             "first_name": user.first_name,
@@ -134,6 +156,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "email": user.email,
             "rol": user.rol,
             "is_active": user.is_active,
+            "is_staff": user.is_staff,
             "creado_en": user.creado_en,
             "run": persona.run if persona else None,
             "fecha_nacimiento": persona.fecha_nacimiento if persona else None,
@@ -143,7 +166,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
         }
 
 
-# PERFIL SERIALIZER
+# ==============================================================
+#                 PERFIL SERIALIZER
+# ==============================================================
+
 class PerfilSerializer(serializers.ModelSerializer):
     abreviado = serializers.SerializerMethodField()
 
@@ -164,7 +190,10 @@ class PerfilSerializer(serializers.ModelSerializer):
         return f"{nombre}{iniciales}".strip() if nombre or iniciales else None
 
 
-# LOGIN CON TOKEN JWT
+# ==============================================================
+#                 LOGIN CON TOKEN JWT
+# ==============================================================
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -181,8 +210,43 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
+# ==============================================================
+#                 RESET PASSWORD (ADMIN / SERVICIO)
+# ==============================================================
 
-# RESET PASSWORD
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(min_length=6, write_only=True)
+
+
+# ==============================================================
+#                 RESET PASSWORD (DESDE LINK POR CORREO)
+# ==============================================================
+
+class ResetPasswordLinkSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    password1 = serializers.CharField(write_only=True, min_length=6)
+    password2 = serializers.CharField(write_only=True, min_length=6)
+
+    def validate(self, data):
+        try:
+            uid = urlsafe_base64_decode(data["uidb64"]).decode()
+            user = Usuario.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+            raise serializers.ValidationError({"uidb64": "Usuario no encontrado."})
+
+        if not default_token_generator.check_token(user, data["token"]):
+            raise serializers.ValidationError({"token": "Token inválido o expirado."})
+
+        if data["password1"] != data["password2"]:
+            raise serializers.ValidationError({"password": "Las contraseñas no coinciden."})
+
+        self.user = user
+        return data
+
+    def save(self):
+        user = self.user
+        user.set_password(self.validated_data["password1"])
+        user.save()
+        return user
