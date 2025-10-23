@@ -35,33 +35,35 @@ class PersonaViewSet(viewsets.ModelViewSet):
             persona = Persona.objects.get(run__iexact=run)
             serializer = PersonaBasicaSerializer(persona)
 
-            # Todos los vínculos de tipo apoderado
+            # Relaciones donde la persona actúa como apoderado
             apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
                 persona=persona,
                 tipo_relacion='apoderado'
             )
 
-            # Solo los que están realmente autorizados
+            # Relaciones autorizadas activas
             autorizados_qs = apoderados_qs.filter(autorizado=True)
 
-            # Información básica de los alumnos asociados
-            alumnos = [rel.alumno for rel in apoderados_qs]
+            # Datos de los alumnos asociados
             alumnos_data = [
                 {
-                    "id": a.id,
+                    "id_alumno": a.id,
                     "nombres": a.persona.nombres,
                     "apellido_uno": a.persona.apellido_uno,
                     "apellido_dos": a.persona.apellido_dos,
-                    "curso": a.curso.nombre if a.curso else None
+                    "id_curso": a.curso.id if a.curso else None,
+                    "curso_nombre": a.curso.nombre if a.curso else None
                 }
-                for a in alumnos
+                for a in [rel.alumno for rel in apoderados_qs]
             ]
 
-            # Lista detallada de autorizaciones (con flag real)
+            # Datos detallados de autorizaciones
             autorizaciones_data = [
                 {
-                    "id": rel.id,
+                    "id_relacion": rel.id,
+                    "id_alumno": rel.alumno.id,
                     "alumno": f"{rel.alumno.persona.nombres} {rel.alumno.persona.apellido_uno} {rel.alumno.persona.apellido_dos or ''}".strip(),
+                    "id_curso": rel.alumno.curso.id if rel.alumno.curso else None,
                     "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
                     "tipo_relacion": rel.tipo_relacion,
                     "autorizado": rel.autorizado
@@ -69,7 +71,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 for rel in apoderados_qs
             ]
 
-            # Evaluar correctamente los estados
+            # Indicadores de estado
             es_apoderado = apoderados_qs.exists()
             es_autorizado = autorizados_qs.exists()
             mensaje_autorizado = "Autorizado" if es_autorizado else "No está autorizado"
