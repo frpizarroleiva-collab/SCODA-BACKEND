@@ -2,14 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-
-# Vistas propias
-from accounts.views import (
-    UsuarioViewSet, 
-    CustomTokenObtainPairView,
-    ResetPasswordFormView, 
-    ResetPasswordDoneView
-)
+from accounts.views import (UsuarioViewSet, CustomTokenObtainPairView,ResetPasswordFormView, ResetPasswordDoneView)
 from escuela.views import CursoViewSet
 from personas.views import PersonaViewSet
 from establecimientos.views import EstablecimientoViewSet
@@ -36,7 +29,7 @@ urlpatterns = [
     path('api/login', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/acceso/refresh', TokenRefreshView.as_view(), name='token_refresh'),
 
-    # Formularios HTML para reset password
+    # Formularios HTML para notificar correo
     path(
         "usuarios/reset-password-form/<uidb64>/<token>/",
         ResetPasswordFormView.as_view(),

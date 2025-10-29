@@ -3,36 +3,59 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from accounts.permiso import HasAPIKey
+from auditoria.mixins import AuditoriaMixin  # 👈 agregado
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
 
 
-class PersonaViewSet(viewsets.ModelViewSet):
+class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mixin
+    """
+    ViewSet que gestiona las personas del sistema SCODA.
+    Incluye un endpoint para validar RUN y retorna datos básicos,
+    junto con relaciones de apoderados y alumnos.
+    """
     queryset = Persona.objects.all()
     serializer_class = PersonaSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
 
-    @action(detail=False,methods=['post'],url_path='validar-run',permission_classes=[IsAuthenticated, HasAPIKey])
+    # ----------------------------------------------------------
+    # VALIDAR RUN
+    # ----------------------------------------------------------
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='validar-run',
+        permission_classes=[IsAuthenticated, HasAPIKey]
+    )
     def validar_run(self, request):
+        """
+        Valida si una persona existe en el sistema a partir de su RUN.
+        Devuelve los datos básicos, los alumnos asociados y si está autorizado.
+        """
         run = request.data.get("run")
+
         if not run:
             return Response({
                 "existe": False,
                 "mensaje": "Debes enviar un RUN en el body"
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Limpieza y normalización del RUN
         run = run.replace(".", "").replace(" ", "").upper()
         print(f"RUN recibido: '{run}'")
 
         try:
             persona = Persona.objects.get(run__iexact=run)
             serializer = PersonaBasicaSerializer(persona)
+
+            # Buscar relaciones como apoderado
             apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
                 persona=persona,
                 tipo_relacion='apoderado'
             )
             alumnos = [rel.alumno for rel in apoderados_qs]
+
             alumnos_data = [
                 {
                     "id": a.id,
@@ -43,6 +66,7 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 }
                 for a in alumnos
             ]
+
             autorizaciones_data = [
                 {
                     "id": rel.id,
@@ -52,9 +76,18 @@ class PersonaViewSet(viewsets.ModelViewSet):
                 }
                 for rel in apoderados_qs
             ]
+
             es_apoderado = len(alumnos) > 0
             es_autorizado = es_apoderado
             mensaje_autorizado = "Autorizado" if es_autorizado else "No está autorizado"
+
+            #Registrar auditoría (solo de lectura, pero útil para trazabilidad)
+            self.registrar_auditoria(
+                request,
+                'CONSULTA',
+                'Persona',
+                f"Validación de RUN {run} - Resultado: {'ENCONTRADO' if persona else 'NO ENCONTRADO'}"
+            )
 
             return Response({
                 "existe": True,
@@ -67,6 +100,14 @@ class PersonaViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
 
         except Persona.DoesNotExist:
+            #Registrar auditoría también para intentos fallidos
+            self.registrar_auditoria(
+                request,
+                'CONSULTA',
+                'Persona',
+                f"Intento de validación de RUN {run} - Persona no encontrada"
+            )
+
             return Response({
                 "existe": False,
                 "mensaje": "No se encontró una persona con ese RUN"

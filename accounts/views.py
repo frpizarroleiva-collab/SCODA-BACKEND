@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.decorators import action
 from django.core.mail import send_mail
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import render
@@ -14,13 +14,14 @@ from django.http import HttpResponse
 from django.conf import settings
 import os
 
+from auditoria.mixins import AuditoriaMixin
 from .models import Usuario
 from .serializers import (
     UsuarioSerializer,
     PerfilSerializer,
     CustomTokenObtainPairSerializer,
     ResetPasswordSerializer,
-    ResetPasswordLinkSerializer,  # 👈 agregado correctamente
+    ResetPasswordLinkSerializer,
 )
 from .permiso import HasAPIKey
 from notificaciones.models import Notificacion
@@ -30,7 +31,7 @@ from notificaciones.models import Notificacion
 #                 USUARIOS - API PRINCIPAL
 # ==============================================================
 
-class UsuarioViewSet(viewsets.ModelViewSet):
+class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
@@ -69,6 +70,15 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         result = serializer.save()
         message = result.get("message", "Usuario y Persona creados correctamente")
         user_data = result.get("user", {})
+
+        # 🔹 Registrar auditoría
+        self.registrar_auditoria(
+            request,
+            'CREAR',
+            'Usuario',
+            f"Se creó el usuario {user_data.get('email', 'sin email')}"
+        )
+
         return Response({"message": message, "user": user_data}, status=201)
 
     # ----------------------------------------------------------
@@ -82,7 +92,32 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         result = serializer.save()
         message = result.get("message", "Usuario y Persona actualizados correctamente")
         user_data = result.get("user", {})
+        self.registrar_auditoria(
+            request,
+            'ACTUALIZAR',
+            'Usuario',
+            f"Se actualizó el usuario {user_data.get('email', instance.email)}"
+        )
+
         return Response({"message": message, "user": user_data}, status=200)
+
+    # ----------------------------------------------------------
+    # ELIMINAR USUARIO
+    # ----------------------------------------------------------
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        email = instance.email
+
+        #Registrar auditoría antes de eliminar
+        self.registrar_auditoria(
+            request,
+            'ELIMINAR',
+            'Usuario',
+            f"Se eliminó el usuario {email}"
+        )
+
+        instance.delete()
+        return Response({"message": "Usuario eliminado con éxito"}, status=204)
 
     # ----------------------------------------------------------
     # RESET PASSWORD (directo con API Key, usado por servicios)
@@ -101,6 +136,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
         user.set_password(new_password)
         user.save()
+
+        # 🔹 Registrar auditoría
+        self.registrar_auditoria(
+            request,
+            'ACTUALIZAR',
+            'Usuario',
+            f"Se cambió la contraseña de {email}"
+        )
 
         Notificacion.objects.create(
             usuario=user,
@@ -150,6 +193,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             fail_silently=False,
         )
 
+        # 🔹 Registrar auditoría
+        self.registrar_auditoria(
+            request,
+            'ENVIAR_CORREO',
+            'Usuario',
+            f"Se envió link de restablecimiento a {email}"
+        )
+
         return Response({"message": "Correo de restablecimiento enviado"}, status=200)
 
     # ----------------------------------------------------------
@@ -160,6 +211,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         serializer = ResetPasswordLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        # 🔹 Registrar auditoría
+        self.registrar_auditoria(
+            request,
+            'ACTUALIZAR',
+            'Usuario',
+            f"El usuario {user.email} definió su contraseña con link."
+        )
 
         Notificacion.objects.create(
             usuario=user,

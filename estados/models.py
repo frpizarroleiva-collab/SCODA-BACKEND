@@ -1,14 +1,11 @@
 from django.db import models
 from django.conf import settings
-
-
 class EstadoAlumno(models.Model):
     ESTADOS_CHOICES = [
         ('AUSENTE', 'Ausente'),
         ('RETIRADO', 'Retirado'),
         ('EXTENSION', 'Extensión'),
     ]
-
     alumno = models.ForeignKey(
         'alumnos.Alumno',
         on_delete=models.CASCADE,
@@ -22,12 +19,7 @@ class EstadoAlumno(models.Model):
     fecha = models.DateField()
     estado = models.CharField(max_length=20, choices=ESTADOS_CHOICES)
     hora_registro = models.DateTimeField(auto_now=True)
-    usuario_registro = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='estados_registrados'
+    usuario_registro = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='estados_registrados'
     )
     observacion = models.TextField(blank=True, null=True)
 
@@ -47,14 +39,8 @@ class HistorialEstadoAlumno(models.Model):
         on_delete=models.CASCADE,
         related_name='historiales'
     )
-    alumno = models.ForeignKey(
-        'alumnos.Alumno',
-        on_delete=models.CASCADE
-    )
-    curso = models.ForeignKey(
-        'escuela.Curso',
-        on_delete=models.CASCADE
-    )
+    alumno = models.ForeignKey('alumnos.Alumno', on_delete=models.CASCADE)
+    curso = models.ForeignKey('escuela.Curso', on_delete=models.CASCADE)
     fecha = models.DateField()
     estado = models.CharField(max_length=20)
     observacion = models.TextField(blank=True, null=True)
@@ -65,12 +51,18 @@ class HistorialEstadoAlumno(models.Model):
         blank=True
     )
     hora_cambio = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         db_table = 'historial_estado_alumno'
         verbose_name = 'Historial de Estado de Alumno'
         verbose_name_plural = 'Historiales de Estados de Alumnos'
         ordering = ['-hora_cambio']
+        #un alumno puede tener varios estados distintos por día, pero NO el mismo estado repetido el mismo día
+        constraints = [
+            models.UniqueConstraint(
+                fields=['alumno', 'fecha', 'estado'],
+                name='unique_estado_por_dia_y_alumno'
+            )
+        ]
 
     def __str__(self):
         return f"{self.alumno.persona.nombres} - {self.estado} ({self.fecha})"

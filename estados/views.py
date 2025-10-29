@@ -3,20 +3,22 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from auditoria.mixins import AuditoriaMixin
 from .models import EstadoAlumno, HistorialEstadoAlumno
 from .serializers import EstadoAlumnoSerializer
 
 
-class EstadoAlumnoViewSet(viewsets.ModelViewSet):
+class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = EstadoAlumnoSerializer
     queryset = EstadoAlumno.objects.all()
 
+    # ----------------------------------------------------------
+    # FILTRO DEL LISTADO PRINCIPAL
+    # ----------------------------------------------------------
     def get_queryset(self):
         user = self.request.user
         queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso')
-
-        # Filtros
         curso_id = self.request.query_params.get('curso_id')
         fecha_str = self.request.query_params.get('fecha')
         desde_str = self.request.query_params.get('desde')
@@ -24,7 +26,7 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
 
         hoy = date.today()
 
-        # Filtrar por rango de fechas
+        # Filtro de fechas
         if desde_str and hasta_str:
             try:
                 desde = datetime.strptime(desde_str, '%Y-%m-%d').date()
@@ -41,16 +43,21 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
         else:
             queryset = queryset.filter(fecha=hoy)
 
-        # Filtrar por curso
+        # Filtro por curso
         if curso_id:
             queryset = queryset.filter(curso_id=curso_id)
 
-        # Rol: profesor
-        if hasattr(user, 'persona') and user.rol.lower() == 'profesor':
-            queryset = queryset.filter(curso__profesor=user.persona)
+        # Control por rol
+        rol = getattr(user, 'rol', '').lower()
+        if rol == 'apoderado':
+            return EstadoAlumno.objects.none()
 
+        # Profesores, portería y admin pueden ver todos los cursos
         return queryset.order_by('-fecha', 'alumno__persona__nombres')
-    
+
+    # ----------------------------------------------------------
+    # ACTUALIZAR ESTADOS DE ALUMNOS (POST)
+    # ----------------------------------------------------------
     @action(detail=False, methods=['post'], url_path='actualizar')
     def actualizar_estados(self, request):
         user = request.user
@@ -66,11 +73,13 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Formato de fecha inválido. Use YYYY-MM-DD.'}, status=400)
         else:
             fecha = date.today()
-            
+
         if not curso_id or not registros:
             return Response({'error': 'curso_id y registros son requeridos'}, status=400)
 
         procesados = []
+        ESTADOS_VALIDOS = {'AUSENTE': 1, 'RETIRADO': 2, 'EXTENSION': 3}
+
         for reg in registros:
             alumno_id = reg.get('alumno_id')
             estado = reg.get('estado')
@@ -79,42 +88,94 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
             if not alumno_id or not estado:
                 continue
 
-            # Actualizar o crear registro
+            # Normalizar estado
+            estado_upper = str(estado).upper().strip()
+
+            # Validar estado permitido
+            if estado_upper not in ESTADOS_VALIDOS:
+                procesados.append({
+                    'alumno_id': alumno_id,
+                    'estado': estado_upper,
+                    'codigo_estado': 0,
+                    'codigo_bloqueo': 900,
+                    'observacion': f"Estado '{estado}' no es válido. Debe ser uno de: {', '.join(ESTADOS_VALIDOS.keys())}."
+                })
+                continue
+
+            # Buscar si ya tiene un estado ese día
+            existente = EstadoAlumno.objects.filter(
+                alumno_id=alumno_id,
+                curso_id=curso_id,
+                fecha=fecha
+            ).first()
+
+            # Reglas de bloqueo
+            if existente:
+                if existente.estado.upper() == estado_upper:
+                    procesados.append({
+                        'alumno_id': alumno_id,
+                        'estado': existente.estado,
+                        'codigo_estado': ESTADOS_VALIDOS.get(existente.estado.upper(), 0),
+                        'codigo_bloqueo': 902,
+                        'observacion': f"El alumno ya tiene el estado '{existente.estado}' asignado para hoy."
+                    })
+                else:
+                    procesados.append({
+                        'alumno_id': alumno_id,
+                        'estado': existente.estado,
+                        'codigo_estado': ESTADOS_VALIDOS.get(existente.estado.upper(), 0),
+                        'codigo_bloqueo': 904,
+                        'observacion': f"No se puede cambiar de {existente.estado} a {estado_upper}. Solo se permite un estado por día."
+                    })
+                continue
+
+            # Crear nuevo estado
             obj, created = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
                 curso_id=curso_id,
                 fecha=fecha,
                 defaults={
-                    'estado': estado,
+                    'estado': estado_upper,
                     'observacion': observacion,
                     'usuario_registro': user
                 }
             )
 
-            # Crear registro de historial asociado
+            # Registrar historial
             HistorialEstadoAlumno.objects.create(
                 estado_alumno=obj,
                 alumno_id=alumno_id,
                 curso_id=curso_id,
                 fecha=fecha,
-                estado=estado,
+                estado=estado_upper,
                 observacion=observacion,
                 usuario_registro=user
             )
 
             procesados.append({
                 'alumno_id': alumno_id,
-                'estado': estado,
+                'estado': estado_upper,
+                'codigo_estado': ESTADOS_VALIDOS.get(estado_upper, 0),
+                'codigo_bloqueo': 0,
                 'observacion': observacion
             })
 
+        # Auditoría
+        self.registrar_auditoria(
+            request,
+            'ACTUALIZAR',
+            'EstadoAlumno',
+            f"Se procesaron {len(procesados)} registros de estado para el curso ID {curso_id} ({fecha})"
+        )
+
         return Response(
-            {
-                'message': f'Se procesaron {len(procesados)} registros para el {fecha}.',
-                'detalle': procesados
-            },
+            {'message': f'Se procesaron {len(procesados)} registros para el {fecha}.', 'detalle': procesados},
             status=status.HTTP_200_OK
         )
+
+    # ----------------------------------------------------------
+    # CONSULTAR HISTORIAL
+    # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='historial')
     def historial(self, request):
         alumno_id = request.query_params.get('alumno_id')
@@ -136,14 +197,110 @@ class EstadoAlumnoViewSet(viewsets.ModelViewSet):
 
         historial = historial.order_by('-hora_cambio')
 
-        data = [{
-            'alumno': h.alumno.persona.nombres,
-            'curso': h.curso.nombre,
-            'fecha': h.fecha,
-            'estado': h.estado,
-            'observacion': h.observacion,
-            'usuario_registro': getattr(h.usuario_registro, 'email', None),
-            'hora_cambio': h.hora_cambio
-        } for h in historial]
-
+        data = [
+            {
+                'alumno': h.alumno.persona.nombres,
+                'curso': h.curso.nombre,
+                'fecha': h.fecha,
+                'estado': h.estado,
+                'codigo_estado': {'AUSENTE': 1, 'RETIRADO': 2, 'EXTENSION': 3}.get(h.estado.upper(), 0),
+                'observacion': h.observacion,
+                'usuario_registro': getattr(h.usuario_registro, 'email', None),
+                'hora_cambio': h.hora_cambio
+            }
+            for h in historial
+        ]
         return Response(data, status=status.HTTP_200_OK)
+
+    # ----------------------------------------------------------
+    # LISTAR AUSENTES DEL DÍA
+    # ----------------------------------------------------------
+    @action(detail=False, methods=['get'], url_path='ausentes')
+    def listar_ausentes(self, request):
+        user = request.user
+        rol = getattr(user, 'rol', '').lower()
+        if rol == 'apoderado':
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+        fecha_str = request.query_params.get('fecha')
+        curso_id = request.query_params.get('curso_id')
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else date.today()
+        except ValueError:
+            fecha = date.today()
+
+        filtros = {'fecha': fecha, 'estado': 'AUSENTE'}
+        if curso_id:
+            filtros['curso_id'] = curso_id
+
+        queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso').filter(**filtros)
+        data = EstadoAlumnoSerializer(queryset, many=True).data
+
+        return Response({
+            "fecha": fecha,
+            "curso_id": curso_id,
+            "total_ausentes": len(data),
+            "alumnos": data
+        }, status=status.HTTP_200_OK)
+
+    # ----------------------------------------------------------
+    # LISTAR RETIROS ANTICIPADOS
+    # ----------------------------------------------------------
+    @action(detail=False, methods=['get'], url_path='retiros')
+    def listar_retiros(self, request):
+        user = request.user
+        rol = getattr(user, 'rol', '').lower()
+        if rol == 'apoderado':
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+        fecha_str = request.query_params.get('fecha')
+        curso_id = request.query_params.get('curso_id')
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else date.today()
+        except ValueError:
+            fecha = date.today()
+
+        filtros = {'fecha': fecha, 'estado': 'RETIRADO'}
+        if curso_id:
+            filtros['curso_id'] = curso_id
+
+        queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso').filter(**filtros)
+        data = EstadoAlumnoSerializer(queryset, many=True).data
+
+        return Response({
+            "fecha": fecha,
+            "curso_id": curso_id,
+            "total_retiros": len(data),
+            "alumnos": data
+        }, status=status.HTTP_200_OK)
+
+    # ----------------------------------------------------------
+    # LISTAR ALUMNOS EN EXTENSIÓN
+    # ----------------------------------------------------------
+    @action(detail=False, methods=['get'], url_path='extension')
+    def listar_extension(self, request):
+        user = request.user
+        rol = getattr(user, 'rol', '').lower()
+        if rol == 'apoderado':
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+        fecha_str = request.query_params.get('fecha')
+        curso_id = request.query_params.get('curso_id')
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else date.today()
+        except ValueError:
+            fecha = date.today()
+
+        filtros = {'fecha': fecha, 'estado': 'EXTENSION'}
+        if curso_id:
+            filtros['curso_id'] = curso_id
+
+        queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso').filter(**filtros)
+        data = EstadoAlumnoSerializer(queryset, many=True).data
+
+        return Response({
+            "fecha": fecha,
+            "curso_id": curso_id,
+            "total_extension": len(data),
+            "alumnos": data
+        }, status=status.HTTP_200_OK)
