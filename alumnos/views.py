@@ -39,7 +39,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "nombre": f"{a.persona.nombres} {a.persona.apellido_uno or ''} {a.persona.apellido_dos or ''}".strip(),
                 "tipo_relacion": a.tipo_relacion,
                 "telefono": a.persona.fono or "",
-                "correo": a.persona.usuario.email if a.persona.usuario else "",
+                "correo": a.persona.email or "",
                 "autorizado": a.autorizado
             }
             for a in autorizados
