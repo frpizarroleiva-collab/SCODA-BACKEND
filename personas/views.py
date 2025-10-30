@@ -3,13 +3,18 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from accounts.permiso import HasAPIKey
-from auditoria.mixins import AuditoriaMixin  # 👈 mantiene la auditoría
+from auditoria.mixins import AuditoriaMixin
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar personas del sistema SCODA.
+    Incluye el endpoint /personas/validar-run para verificar si
+    una persona existe, y listar sus relaciones (apoderado/alumnos).
+    """
     queryset = Persona.objects.all()
     serializer_class = PersonaSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
@@ -110,7 +115,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             # ----------------------------------------------------------
             return Response({
                 "existe": True,
-                "persona": serializer.data,
+                "persona": serializer.data,  # ✅ ahora incluye email si existe
                 "es_apoderado": es_apoderado,
                 "alumnos_asociados": alumnos_data,
                 "es_autorizado": es_autorizado,

@@ -15,6 +15,8 @@ class Persona(models.Model):
     apellido_uno = models.CharField(max_length=120)
     apellido_dos = models.CharField(max_length=120, blank=True, null=True)
     fecha_nacimiento = models.DateField(blank=True, null=True)
+    email = models.EmailField(max_length=120, blank=True, null=True)
+
     fono = models.CharField(max_length=20, blank=True, null=True)
     comuna = models.ForeignKey(
         'ubicacion.Comuna',
@@ -33,14 +35,18 @@ class Persona(models.Model):
 
     class Meta:
         db_table = 'persona'
+        verbose_name = 'Persona'
+        verbose_name_plural = 'Personas'
 
     def __str__(self):
-        return f"{self.nombres} {self.apellido_uno} ({self.run})"
+        nombre = f"{self.nombres} {self.apellido_uno}".strip()
+        return f"{nombre} ({self.run or 'Sin RUN'})"
 
     def save(self, *args, **kwargs):
         if self.run == '':
             self.run = None
         super().save(*args, **kwargs)
+
 
 class DocumentoIdentidad(models.Model):
     persona = models.ForeignKey(
@@ -61,6 +67,8 @@ class DocumentoIdentidad(models.Model):
     class Meta:
         db_table = 'documento_identidad'
         unique_together = (('persona', 'tipo', 'identificador'),)
+        verbose_name = 'Documento de Identidad'
+        verbose_name_plural = 'Documentos de Identidad'
 
     def __str__(self):
         return f"{self.tipo} {self.identificador}"

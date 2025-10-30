@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Persona
 
+
 class PersonaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Persona
@@ -9,4 +10,10 @@ class PersonaSerializer(serializers.ModelSerializer):
 class PersonaBasicaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Persona
-        fields = ["run", "nombres", "apellido_uno", "apellido_dos"]
+        fields = [
+            "run",
+            "nombres",
+            "apellido_uno",
+            "apellido_dos",
+            "email",  # ✅ agregado para mostrar el correo si existe
+        ]
