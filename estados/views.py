@@ -88,10 +88,8 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             if not alumno_id or not estado:
                 continue
 
-            # Normalizar estado
             estado_upper = str(estado).upper().strip()
 
-            # Validar estado permitido
             if estado_upper not in ESTADOS_VALIDOS:
                 procesados.append({
                     'alumno_id': alumno_id,
@@ -102,14 +100,12 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
-            # Buscar si ya tiene un estado ese día
             existente = EstadoAlumno.objects.filter(
                 alumno_id=alumno_id,
                 curso_id=curso_id,
                 fecha=fecha
             ).first()
 
-            # Reglas de bloqueo
             if existente:
                 if existente.estado.upper() == estado_upper:
                     procesados.append({
@@ -129,7 +125,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     })
                 continue
 
-            # Crear nuevo estado
             obj, created = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
                 curso_id=curso_id,
@@ -141,7 +136,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 }
             )
 
-            # Registrar historial
             HistorialEstadoAlumno.objects.create(
                 estado_alumno=obj,
                 alumno_id=alumno_id,
@@ -160,7 +154,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 'observacion': observacion
             })
 
-        # Auditoría
         self.registrar_auditoria(
             request,
             'ACTUALIZAR',
@@ -244,10 +237,12 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
     # ----------------------------------------------------------
-    # LISTAR RETIROS ANTICIPADOS
+    # LISTAR RETIROS ANTICIPADOS (extendido)
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='retiros')
     def listar_retiros(self, request):
+        from alumnos.models import PersonaAutorizadaAlumno
+
         user = request.user
         rol = getattr(user, 'rol', '').lower()
         if rol == 'apoderado':
@@ -264,15 +259,58 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if curso_id:
             filtros['curso_id'] = curso_id
 
-        queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso').filter(**filtros)
-        data = EstadoAlumnoSerializer(queryset, many=True).data
+        queryset = (
+            EstadoAlumno.objects
+            .select_related('alumno__persona', 'curso__establecimiento', 'usuario_registro')
+            .filter(**filtros)
+        )
 
-        return Response({
-            "fecha": fecha,
-            "curso_id": curso_id,
-            "total_retiros": len(data),
-            "alumnos": data
-        }, status=status.HTTP_200_OK)
+        alumnos_data = []
+        for estado in queryset:
+            alumno = estado.alumno
+            persona = alumno.persona
+            curso = alumno.curso
+            establecimiento = curso.establecimiento if curso else None
+
+            # --- Contactos autorizados ---
+            contactos = PersonaAutorizadaAlumno.objects.filter(alumno=alumno)
+            contactos_autorizados = [
+                {
+                    "nombre": f"{c.persona.nombres} {c.persona.apellido_uno} {c.persona.apellido_dos or ''}".strip(),
+                    "relacion": c.tipo_relacion,
+                    "telefono": getattr(c.persona, 'fono', None),
+                    "correo": getattr(c.persona, 'email', None),
+                    "autorizado": "Sí" if c.autorizado else "No"
+                }
+                for c in contactos
+            ]
+
+            # --- Responsable y registro ---
+            retirado_por = getattr(estado, 'retirado_por', None)
+            usuario_registro = estado.usuario_registro
+
+            alumnos_data.append({
+                "alumno_id": alumno.id,
+                "alumno_nombre": f"{persona.nombres} {persona.apellido_uno} {persona.apellido_dos or ''}".strip(),
+                "curso": curso.nombre if curso else None,
+                "establecimiento": establecimiento.nombre if establecimiento else None,
+                "estado": estado.estado,
+                "hora_registro": estado.hora_registro,
+                "observacion": estado.observacion,
+                "quien_retiro": f"{retirado_por.persona.nombres} {retirado_por.persona.apellido_uno}" if retirado_por else None,
+                "quien_registro": usuario_registro.email if usuario_registro else None,
+                "contactos_autorizados": contactos_autorizados
+            })
+
+        response_data = {
+            "fecha": str(fecha),
+            "curso": curso.nombre if curso_id and queryset.exists() else None,
+            "establecimiento": establecimiento.nombre if queryset.exists() else None,
+            "total_retiros": len(alumnos_data),
+            "alumnos": alumnos_data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     # ----------------------------------------------------------
     # LISTAR ALUMNOS EN EXTENSIÓN
