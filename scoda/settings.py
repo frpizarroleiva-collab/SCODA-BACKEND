@@ -190,3 +190,6 @@ FRONTEND_URL = env(
     "FRONTEND_URL",
     default="http://localhost:8000/api/usuarios"
 )
+LOGIN_URL = '/panel/'  # dónde redirigir si no está autenticado
+
+SCODA_API_KEY = env('SCODA_API_KEY')

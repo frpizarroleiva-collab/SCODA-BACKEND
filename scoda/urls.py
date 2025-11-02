@@ -21,6 +21,11 @@ router.register(r'estado-alumnos', EstadoAlumnoViewSet, basename='estado-alumno'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    
+    # Administrador personalizado(Login solo Rol ADMIN)
+    path('panel/', include('admin_panel.urls')),
+
 
     # API endpoints principales
     path('api/', include(router.urls)),

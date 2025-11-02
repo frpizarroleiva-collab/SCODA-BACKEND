@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Usuarios</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
+        h2 { color: #007BFF; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #007BFF; color: white; }
+        button { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; }
+        button.add { background: #28a745; color: white; margin-bottom: 10px; }
+        button.edit { background: #ffc107; }
+        button.delete { background: #dc3545; color: white; }
+
+        .modal {
+            display: none; position: fixed; z-index: 10;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 8px; width: 400px;
+        }
+        input, select {
+            width: 100%; padding: 8px; margin: 8px 0;
+            border: 1px solid #ccc; border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Gestión de Usuarios</h2>
+    <button class="add" onclick="abrirModal()">+ Nuevo usuario</button>
+
+    <table id="usuarios-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <!-- Modal -->
+    <div class="modal" id="modalUsuario">
+        <div class="modal-content">
+            <h3 id="modalTitulo">Nuevo Usuario</h3>
+            <form id="usuarioForm" onsubmit="guardarUsuario(event)">
+                <input type="hidden" id="usuarioEmailHidden">
+
+                <label>Nombre:</label>
+                <input type="text" id="first_name" placeholder="Nombre">
+
+                <label>Apellido:</label>
+                <input type="text" id="last_name" placeholder="Apellido">
+
+                <label>Email:</label>
+                <input type="email" id="email" required>
+
+                <label>Rol:</label>
+                <select id="rol" required>
+                    <option value="admin">ADMIN</option>
+                    <option value="profesor">PROFESOR</option>
+                    <option value="apoderado">APODERADO</option>
+                    <option value="porteria">PORTERIA</option>
+                </select>
+
+                <label>Activo:</label>
+                <select id="activo" required>
+                    <option value="true">Sí</option>
+                    <option value="false">No</option>
+                </select>
+
+                <label>Contraseña:</label>
+                <input type="password" id="password" placeholder="••••••">
+
+                <button type="submit" style="background:#007BFF;color:white;">Guardar</button>
+                <button type="button" onclick="cerrarModal()">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // =============================
+        // CONFIG GENERAL
+        // =============================
+        const API_URL = '/api/usuarios';
+        const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
+        const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
+
+        if (ACCESS_TOKEN && !localStorage.getItem('access_token')) {
+            localStorage.setItem('access_token', ACCESS_TOKEN);
+        }
+        const token = localStorage.getItem('access_token');
+
+        function getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : '',
+                'X-API-KEY': SCODA_API_KEY
+            };
+        }
+
+        // =============================
+        // CARGAR USUARIOS
+        // =============================
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch(API_URL, { headers: getHeaders() });
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+                const data = await res.json();
+
+                const tbody = document.querySelector('#usuarios-table tbody');
+                tbody.innerHTML = '';
+                data.forEach((u, i) => {
+                    tbody.innerHTML += `
+                        <tr data-email="${u.email}">
+                            <td>${i + 1}</td>
+                            <td>${u.first_name || ''} ${u.last_name || ''}</td>
+                            <td>${u.email}</td>
+                            <td>${u.rol}</td>
+                            <td>${u.is_active ? 'Sí' : 'No'}</td>
+                            <td>
+                                <button class="edit" onclick="editarUsuario('${u.email}')">Editar</button>
+                                <button class="delete" onclick="eliminarUsuario('${u.email}')">Eliminar</button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (error) {
+                console.error('Error al cargar usuarios:', error);
+                alert('No se pudieron cargar los usuarios. Verifica token o API Key.');
+            }
+        }
+
+        // =============================
+        // MODAL
+        // =============================
+        function abrirModal(usuario = null) {
+            const modal = document.getElementById('modalUsuario');
+            modal.style.display = 'flex';
+            document.getElementById('usuarioForm').reset();
+            document.getElementById('usuarioEmailHidden').value = usuario?.email || '';
+            document.getElementById('modalTitulo').textContent = usuario ? 'Editar Usuario' : 'Nuevo Usuario';
+
+            if (usuario) {
+                document.getElementById('first_name').value = usuario.first_name || '';
+                document.getElementById('last_name').value = usuario.last_name || '';
+                document.getElementById('email').value = usuario.email;
+                document.getElementById('rol').value = usuario.rol;
+                document.getElementById('activo').value = usuario.is_active ? 'true' : 'false';
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalUsuario').style.display = 'none';
+        }
+
+        // =============================
+        // GUARDAR (CREATE/UPDATE)
+        // =============================
+        async function guardarUsuario(e) {
+            e.preventDefault();
+
+            const emailHidden = document.getElementById('usuarioEmailHidden').value;
+            const url = emailHidden ? `${API_URL}/${encodeURIComponent(emailHidden)}` : API_URL;
+            const method = emailHidden ? 'PUT' : 'POST';
+
+            const usuario = {
+                first_name: document.getElementById('first_name').value || 'SinNombre',
+                last_name: document.getElementById('last_name').value || 'SinApellido',
+                email: document.getElementById('email').value,
+                rol: document.getElementById('rol').value,
+                is_active: document.getElementById('activo').value === 'true',
+                password: document.getElementById('password').value || '12345678'
+            };
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: getHeaders(),
+                    body: JSON.stringify(usuario)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert(data.message || 'Usuario guardado correctamente.');
+                    cerrarModal();
+                    cargarUsuarios();
+                } else {
+                    console.error('Error del backend:', data);
+                    alert(`Error (${res.status}): ${JSON.stringify(data, null, 2)}`);
+                }
+            } catch (error) {
+                console.error('Error general:', error);
+                alert('No se pudo guardar el usuario. Verifica conexión o API Key.');
+            }
+        }
+
+        // =============================
+        // EDITAR
+        // =============================
+        async function editarUsuario(email) {
+            try {
+                const res = await fetch(`${API_URL}/${encodeURIComponent(email)}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Usuario no encontrado');
+                const usuario = await res.json();
+                abrirModal(usuario);
+            } catch (error) {
+                console.error('Error al obtener usuario:', error);
+                alert('No se pudo obtener la información del usuario.');
+            }
+        }
+
+        // =============================
+        // ELIMINAR
+        // =============================
+        function eliminarUsuario(email) {
+            if (confirm("¿Seguro que deseas eliminar este usuario?")) {
+                fetch(`${API_URL}/${encodeURIComponent(email)}`, {
+                    method: "DELETE",
+                    headers: getHeaders()
+                })
+                .then(response => {
+                    if (response.status === 204) {
+                        alert("Usuario eliminado correctamente");
+                        document.querySelector(`tr[data-email="${email}"]`).remove();
+                    } else {
+                        return response.json().then(data => { throw new Error(JSON.stringify(data)); });
+                    }
+                })
+                .catch(error => {
+                    alert("Error al eliminar: " + error.message);
+                });
+            }
+        }
+
+        // =============================
+        // CERRAR MODAL EXTERNO
+        // =============================
+        window.onclick = function(e) {
+            const modal = document.getElementById('modalUsuario');
+            if (e.target === modal) modal.style.display = 'none';
+        }
+
+
+        function cerrarSesion() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login.html';  // o la ruta de tu login
+        }
+
+
+
+
+        // Inicial
+        cargarUsuarios();
+    </script>
+</body>
+</html>

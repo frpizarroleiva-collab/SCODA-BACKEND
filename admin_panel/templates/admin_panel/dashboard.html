@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrador SCODA</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; }
+        header { background: #08ad3a; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        nav { background: #ffffff; display: flex; gap: 20px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        nav a { text-decoration: none; color: #007BFF; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+        a.logout { background: #77030f; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <p>Bienvenido :) {{ user.first_name }} {{ user.last_name }}</p>
+        <a href="{% url 'logout' %}" class="logout">Cerrar sesión</a>
+    </header>
+    <nav>
+        <a href="{% url 'usuarios' %}">Usuarios</a>
+        <a href="{% url 'alumnos' %}">Alumnos</a>
+        <a href="{% url 'cursos' %}">Cursos</a>
+    </nav>
+    <main style="padding: 20px;">
+        <h2>Panel principal</h2>
+        <p>Selecciona una pestaña para administrar información.</p>
+    </main>
+</body>
+</html>
