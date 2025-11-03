@@ -193,3 +193,8 @@ FRONTEND_URL = env(
 LOGIN_URL = '/panel/'  # dónde redirigir si no está autenticado
 
 SCODA_API_KEY = env('SCODA_API_KEY')
+
+API_BASE_URL = env(
+    "API_BASE_URL",
+    default="http://127.0.0.1:8000"  # URL del backend local por defecto
+)

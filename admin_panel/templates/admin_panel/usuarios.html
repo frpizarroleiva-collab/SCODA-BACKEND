@@ -89,7 +89,9 @@
         // =============================
         // CONFIG GENERAL
         // =============================
-        const API_URL = '/api/usuarios';
+        const API_BASE_URL = "{{ API_BASE_URL }}";  
+        const API_URL = `${API_BASE_URL}/api/usuarios`;
+
         const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
         const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
 
@@ -248,14 +250,10 @@
             if (e.target === modal) modal.style.display = 'none';
         }
 
-
         function cerrarSesion() {
             localStorage.removeItem('access_token');
-            window.location.href = '/login.html';  // o la ruta de tu login
+            window.location.href = '/login';  // ruta Django, no archivo .html
         }
-
-
-
 
         // Inicial
         cargarUsuarios();
