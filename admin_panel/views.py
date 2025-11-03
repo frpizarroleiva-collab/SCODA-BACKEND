@@ -9,14 +9,19 @@ from accounts.models import Usuario
 
 
 # ---------------------------------------------------------
+# FUNCIONES AUXILIARES
+# ---------------------------------------------------------
+def get_api_base_url():
+    return (
+        getattr(settings, "API_BASE_URL", None)
+        or os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+    )
+
+
+# ---------------------------------------------------------
 # LOGIN DEL PANEL ADMINISTRATIVO
 # ---------------------------------------------------------
 def login_view(request):
-    """
-    Vista de login exclusiva para usuarios con rol ADMIN.
-    Autentica al usuario localmente y obtiene un token JWT 
-    desde la API del backend.
-    """
     if request.user.is_authenticated:
         return redirect('dashboard')
 
@@ -29,8 +34,8 @@ def login_view(request):
             login(request, user)
 
             try:
-                # Construir URL absoluta
-                api_url = f"{request.scheme}://{request.get_host()}/api/login"
+                # Usa la URL base según el entorno
+                api_url = f"{get_api_base_url()}/api/login/"
 
                 # Tomar API key desde settings o entorno
                 api_key = getattr(settings, "SCODA_API_KEY", None) or os.getenv("SCODA_API_KEY")
@@ -49,7 +54,7 @@ def login_view(request):
                     "password": password
                 }, headers=headers)
 
-                #Manejo correcto de respuestas
+                # Manejo correcto de respuestas
                 if response.status_code == 200:
                     tokens = response.json()
                     access_token = tokens.get("access")
@@ -74,16 +79,11 @@ def login_view(request):
     return render(request, 'admin_panel/login.html')
 
 
-
 # ---------------------------------------------------------
 # DASHBOARD PRINCIPAL
 # ---------------------------------------------------------
 @login_required
 def dashboard(request):
-    """
-    Vista principal del panel administrativo.
-    Solo accesible para usuarios con rol ADMIN.
-    """
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
         messages.error(request, 'Tu cuenta no tiene permisos para acceder al panel.')
@@ -97,9 +97,6 @@ def dashboard(request):
 # ---------------------------------------------------------
 @login_required
 def logout_view(request):
-    """
-    Cierra la sesión del usuario y elimina el token JWT guardado.
-    """
     logout(request)
     request.session.pop("ACCESS_TOKEN", None)
     messages.success(request, 'Sesión cerrada correctamente.')
@@ -111,10 +108,6 @@ def logout_view(request):
 # ---------------------------------------------------------
 @login_required
 def usuarios_view(request):
-    """
-    Vista de gestión de usuarios (CRUD).
-    Solo accesible por ADMIN.
-    """
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
         return redirect('login')
@@ -123,17 +116,12 @@ def usuarios_view(request):
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
         "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", "")
     }
-    # print("TOKEN EN SESIÓN:", request.session.get("ACCESS_TOKEN"))
 
     return render(request, "admin_panel/usuarios.html", context)
 
 
 @login_required
 def alumnos_view(request):
-    """
-    Vista de gestión de alumnos.
-    Solo accesible por ADMIN.
-    """
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
         return redirect('login')
@@ -147,10 +135,6 @@ def alumnos_view(request):
 
 @login_required
 def cursos_view(request):
-    """
-    Vista de gestión de cursos.
-    Solo accesible por ADMIN.
-    """
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
         return redirect('login')
