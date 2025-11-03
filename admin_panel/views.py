@@ -1,10 +1,10 @@
 import os
-import requests
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Usuario
 
 
@@ -19,9 +19,15 @@ def get_api_base_url():
 
 
 # ---------------------------------------------------------
-# LOGIN DEL PANEL ADMINISTRATIVO
+# LOGIN DEL PANEL ADMINISTRATIVO (sin requests)
 # ---------------------------------------------------------
 def login_view(request):
+    """
+    Vista de login para el panel administrativo.
+    - Autentica con Django.
+    - Genera token JWT localmente (sin llamar al backend vía HTTP).
+    - Guarda el token en sesión.
+    """
     if request.user.is_authenticated:
         return redirect('dashboard')
 
@@ -34,42 +40,17 @@ def login_view(request):
             login(request, user)
 
             try:
-                # Usa la URL base según el entorno
-                api_url = f"{get_api_base_url()}/api/login"
+                # Generar tokens JWT directamente sin llamada HTTP
+                refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
 
-                # Tomar API key desde settings o entorno
-                api_key = getattr(settings, "SCODA_API_KEY", None) or os.getenv("SCODA_API_KEY")
+                # Guardar en sesión para uso en frontend (fetch, headers, etc.)
+                request.session["ACCESS_TOKEN"] = access_token
 
-                if not api_key:
-                    messages.error(request, "No se encontró la variable SCODA_API_KEY en settings o entorno.")
-                    return redirect('dashboard')
-
-                headers = {
-                    "Content-Type": "application/json",
-                    "X-API-KEY": api_key,
-                }
-
-                response = requests.post(api_url, json={
-                    "email": email,
-                    "password": password
-                }, headers=headers)
-
-                # Manejo correcto de respuestas
-                if response.status_code == 200:
-                    tokens = response.json()
-                    access_token = tokens.get("access")
-                    request.session["ACCESS_TOKEN"] = access_token
-                    messages.success(request, "Inicio de sesión exitoso.")
-                elif response.status_code == 403:
-                    messages.error(request, "Acceso prohibido. Verifica tu API Key.")
-                else:
-                    messages.warning(
-                        request,
-                        f"No se pudo obtener el token JWT. Código: {response.status_code}"
-                    )
+                messages.success(request, "Inicio de sesión exitoso (token generado localmente).")
 
             except Exception as e:
-                messages.error(request, f"Error al conectar con la API: {str(e)}")
+                messages.error(request, f"Error generando el token JWT: {str(e)}")
 
             return redirect('dashboard')
 
@@ -116,7 +97,6 @@ def usuarios_view(request):
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
         "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", "")
     }
-
     return render(request, "admin_panel/usuarios.html", context)
 
 
