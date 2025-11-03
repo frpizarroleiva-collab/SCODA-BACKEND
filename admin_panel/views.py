@@ -35,7 +35,7 @@ def login_view(request):
 
             try:
                 # Usa la URL base según el entorno
-                api_url = f"{get_api_base_url()}/api/login/"
+                api_url = f"{get_api_base_url()}/api/login"
 
                 # Tomar API key desde settings o entorno
                 api_key = getattr(settings, "SCODA_API_KEY", None) or os.getenv("SCODA_API_KEY")
