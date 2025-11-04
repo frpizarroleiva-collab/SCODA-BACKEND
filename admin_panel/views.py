@@ -12,6 +12,10 @@ from accounts.models import Usuario
 # FUNCIONES AUXILIARES
 # ---------------------------------------------------------
 def get_api_base_url():
+    """
+    Obtiene la URL base del backend, dependiendo del entorno.
+    Local por defecto (127.0.0.1) o la URL pública en Render.
+    """
     return (
         getattr(settings, "API_BASE_URL", None)
         or os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
@@ -22,12 +26,6 @@ def get_api_base_url():
 # LOGIN DEL PANEL ADMINISTRATIVO (sin requests)
 # ---------------------------------------------------------
 def login_view(request):
-    """
-    Vista de login para el panel administrativo.
-    - Autentica con Django.
-    - Genera token JWT localmente (sin llamar al backend vía HTTP).
-    - Guarda el token en sesión.
-    """
     if request.user.is_authenticated:
         return redirect('dashboard')
 
@@ -95,7 +93,8 @@ def usuarios_view(request):
 
     context = {
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
-        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", "")
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/usuarios.html", context)
 
@@ -108,7 +107,8 @@ def alumnos_view(request):
 
     context = {
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
-        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", "")
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/alumnos.html", context)
 
@@ -121,6 +121,7 @@ def cursos_view(request):
 
     context = {
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
-        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", "")
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/cursos.html", context)

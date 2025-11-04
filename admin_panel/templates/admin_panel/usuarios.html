@@ -90,10 +90,14 @@
         // CONFIG GENERAL
         // =============================
         const API_BASE_URL = "{{ API_BASE_URL }}";  
-        const API_URL = `${API_BASE_URL}/api/usuarios`;
-
         const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
         const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
+        const API_URL = `${API_BASE_URL}/api/usuarios`;
+
+        // 🔍 Debug temporal para verificar entorno y tokens
+        console.log("API_BASE_URL:", API_BASE_URL);
+        console.log("SCODA_API_KEY:", SCODA_API_KEY);
+        console.log("ACCESS_TOKEN:", ACCESS_TOKEN);
 
         if (ACCESS_TOKEN && !localStorage.getItem('access_token')) {
             localStorage.setItem('access_token', ACCESS_TOKEN);
@@ -252,7 +256,7 @@
 
         function cerrarSesion() {
             localStorage.removeItem('access_token');
-            window.location.href = '/login';  // ruta Django, no archivo .html
+            window.location.href = '/login';
         }
 
         // Inicial
