@@ -56,6 +56,8 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     # ----------------------------------------------------------
     @action(detail=False, methods=['post'], url_path='actualizar')
     def actualizar_estados(self, request):
+        from alumnos.models import PersonaAutorizadaAlumno
+
         user = request.user
         curso_id = request.data.get('curso_id')
         registros = request.data.get('registros', [])
@@ -79,12 +81,14 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             alumno_id = reg.get('alumno_id')
             estado = reg.get('estado')
             observacion = reg.get('observacion', '')
+            retirado_por_id = reg.get('retirado_por_id')
 
             if not alumno_id or not estado:
                 continue
 
             estado_upper = str(estado).upper().strip()
 
+            # --- Validar estado válido ---
             if estado_upper not in ESTADOS_VALIDOS:
                 procesados.append({
                     'alumno_id': alumno_id,
@@ -95,12 +99,12 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
+            # --- Validar si ya existe ---
             existente = EstadoAlumno.objects.filter(
                 alumno_id=alumno_id,
                 curso_id=curso_id,
                 fecha=fecha
             ).first()
-
             if existente:
                 procesados.append({
                     'alumno_id': alumno_id,
@@ -111,15 +115,48 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
+            # ----------------------------------------------------------
+            # VALIDACIÓN: quien retira debe estar autorizado o ser apoderado
+            # ----------------------------------------------------------
+            if estado_upper == 'RETIRADO' and retirado_por_id:
+                autorizado = PersonaAutorizadaAlumno.objects.filter(
+                    alumno_id=alumno_id,
+                    persona_id=retirado_por_id,
+                    autorizado=True
+                ).exists()
+
+                apoderado = PersonaAutorizadaAlumno.objects.filter(
+                    alumno_id=alumno_id,
+                    persona_id=retirado_por_id,
+                    tipo_relacion__icontains='apoderado'
+                ).exists()
+
+                if not (autorizado or apoderado):
+                    procesados.append({
+                        'alumno_id': alumno_id,
+                        'estado': estado_upper,
+                        'codigo_estado': 0,
+                        'codigo_bloqueo': 910,
+                        'observacion': "La persona indicada no está autorizada ni registrada como apoderado del alumno."
+                    })
+                    continue  # salta el registro, no se guarda
+
+            # ----------------------------------------------------------
+            # GUARDAR REGISTRO
+            # ----------------------------------------------------------
+            defaults = {
+                'estado': estado_upper,
+                'observacion': observacion,
+                'usuario_registro': user
+            }
+            if estado_upper == 'RETIRADO' and retirado_por_id:
+                defaults['retirado_por_id'] = retirado_por_id
+
             obj, _ = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
                 curso_id=curso_id,
                 fecha=fecha,
-                defaults={
-                    'estado': estado_upper,
-                    'observacion': observacion,
-                    'usuario_registro': user
-                }
+                defaults=defaults
             )
 
             HistorialEstadoAlumno.objects.create(
@@ -129,7 +166,8 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 fecha=fecha,
                 estado=estado_upper,
                 observacion=observacion,
-                usuario_registro=user
+                usuario_registro=user,
+                retirado_por_id=retirado_por_id if estado_upper == 'RETIRADO' else None
             )
 
             procesados.append({
@@ -140,6 +178,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 'observacion': observacion
             })
 
+        # Auditoría
         self.registrar_auditoria(
             request, 'ACTUALIZAR', 'EstadoAlumno',
             f"Se procesaron {len(procesados)} registros para el curso {curso_id} ({fecha})"
@@ -187,7 +226,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
     # ----------------------------------------------------------
-    # LISTAR AUSENTES
+    # LISTAR AUSENTES / RETIROS / EXTENSIÓN
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='ausentes')
     def listar_ausentes(self, request):
@@ -217,9 +256,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "alumnos": data
         }, status=status.HTTP_200_OK)
 
-    # ----------------------------------------------------------
-    # LISTAR RETIROS ANTICIPADOS
-    # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='retiros')
     def listar_retiros(self, request):
         from alumnos.models import PersonaAutorizadaAlumno
@@ -289,9 +325,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "alumnos": alumnos_data
         }, status=status.HTTP_200_OK)
 
-    # ----------------------------------------------------------
-    # LISTAR ALUMNOS EN EXTENSIÓN
-    # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='extension')
     def listar_extension(self, request):
         user = request.user

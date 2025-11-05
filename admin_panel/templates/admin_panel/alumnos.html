@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Alumnos</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
+        h2 { color: #007BFF; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #007BFF; color: white; }
+        button { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; }
+        button.add { background: #28a745; color: white; margin-bottom: 10px; }
+        button.edit { background: #ffc107; }
+        button.delete { background: #dc3545; color: white; }
+        button.back { background: #6c757d; color: white; margin-bottom: 15px; }
+
+        .modal {
+            display: none; position: fixed; z-index: 10;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 8px; width: 400px;
+        }
+        input, select {
+            width: 100%; padding: 8px; margin: 8px 0;
+            border: 1px solid #ccc; border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Gestión de Alumnos</h2>
+
+    <button class="back" onclick="volverDashboard()">← Volver al Dashboard</button>
+    <button class="add" onclick="abrirModal()">+ Nuevo alumno</button>
+
+    <table id="alumnos-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>RUN</th>
+                <th>Curso</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="modal" id="modalAlumno">
+        <div class="modal-content">
+            <h3 id="modalTitulo">Nuevo Alumno</h3>
+            <form id="alumnoForm" onsubmit="guardarAlumno(event)">
+                <input type="hidden" id="alumnoIdHidden">
+
+                <label>Persona:</label>
+                <select id="persona" required></select>
+
+                <label>Curso:</label>
+                <select id="curso" required></select>
+
+                <button type="submit" style="background:#007BFF;color:white;">Guardar</button>
+                <button type="button" onclick="cerrarModal()">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "{{ API_BASE_URL }}";
+        const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
+        const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
+        const API_URL = `${API_BASE_URL}/api/alumnos`;
+
+        if (ACCESS_TOKEN && !localStorage.getItem('access_token')) {
+            localStorage.setItem('access_token', ACCESS_TOKEN);
+        }
+        const token = localStorage.getItem('access_token');
+
+        function getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : '',
+                'X-API-KEY': SCODA_API_KEY
+            };
+        }
+
+        async function cargarSelects() {
+            const personasRes = await fetch(`${API_BASE_URL}/api/personas`, { headers: getHeaders() });
+            const personas = await personasRes.json();
+            const personaSelect = document.getElementById('persona');
+            personaSelect.innerHTML = '<option value="">Seleccione persona</option>';
+            personas.forEach(p => {
+                personaSelect.innerHTML += `<option value="${p.id}">${p.nombres} ${p.apellido_uno} (${p.run})</option>`;
+            });
+
+            const cursosRes = await fetch(`${API_BASE_URL}/api/cursos`, { headers: getHeaders() });
+            const cursos = await cursosRes.json();
+            const cursoSelect = document.getElementById('curso');
+            cursoSelect.innerHTML = '<option value="">Seleccione curso</option>';
+            cursos.forEach(c => {
+                cursoSelect.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
+            });
+        }
+
+        async function cargarAlumnos() {
+            try {
+                const res = await fetch(API_URL, { headers: getHeaders() });
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+                const data = await res.json();
+
+                const tbody = document.querySelector('#alumnos-table tbody');
+                tbody.innerHTML = '';
+                data.forEach((a, i) => {
+                    const persona = a.persona_detalle || {};
+                    const curso = a.curso_detalle || {};
+                    tbody.innerHTML += `
+                        <tr data-id="${a.id}">
+                            <td>${i + 1}</td>
+                            <td>${persona.nombres || ''} ${persona.apellido_uno || ''}</td>
+                            <td>${persona.run || ''}</td>
+                            <td>${curso.nombre || '—'}</td>
+                            <td>
+                                <button class="edit" onclick="editarAlumno(${a.id})">Editar</button>
+                                <button class="delete" onclick="eliminarAlumno(${a.id})">Eliminar</button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (error) {
+                console.error('Error al cargar alumnos:', error);
+                alert('No se pudieron cargar los alumnos.');
+            }
+        }
+
+        function abrirModal(alumno = null) {
+            const modal = document.getElementById('modalAlumno');
+            modal.style.display = 'flex';
+            document.getElementById('alumnoForm').reset();
+            document.getElementById('alumnoIdHidden').value = alumno?.id || '';
+            if (alumno) {
+                document.getElementById('persona').value = alumno.persona || alumno.persona_detalle?.id || '';
+                document.getElementById('curso').value = alumno.curso || alumno.curso_detalle?.id || '';
+            }
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalAlumno').style.display = 'none';
+        }
+
+        async function guardarAlumno(e) {
+            e.preventDefault();
+            const id = document.getElementById('alumnoIdHidden').value;
+            const url = id ? `${API_URL}/${id}` : API_URL;
+            const method = id ? 'PUT' : 'POST';
+
+            const alumno = {
+                persona: parseInt(document.getElementById('persona').value),
+                curso: parseInt(document.getElementById('curso').value)
+            };
+
+            try {
+                const res = await fetch(url, {
+                    method, headers: getHeaders(), body: JSON.stringify(alumno)
+                });
+                if (res.ok) {
+                    alert("Alumno guardado correctamente");
+                    cerrarModal();
+                    cargarAlumnos();
+                } else {
+                    const errData = await res.json();
+                    alert("Error al guardar: " + (errData.detail || JSON.stringify(errData)));
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error general al guardar alumno");
+            }
+        }
+
+        async function editarAlumno(id) {
+            const res = await fetch(`${API_URL}/${id}`, { headers: getHeaders() });
+            if (!res.ok) return alert('Alumno no encontrado');
+            const alumno = await res.json();
+            abrirModal(alumno);
+        }
+
+        function eliminarAlumno(id) {
+            if (confirm("¿Seguro que deseas eliminar este alumno?")) {
+                fetch(`${API_URL}/${id}`, { method: "DELETE", headers: getHeaders() })
+                    .then(res => {
+                        if (res.status === 204) {
+                            alert("Alumno eliminado");
+                            document.querySelector(`tr[data-id="${id}"]`).remove();
+                        }
+                    });
+            }
+        }
+
+        function volverDashboard() {
+            window.location.href = "/panel/dashboard/";
+        }
+
+        window.onclick = function(e) {
+            const modal = document.getElementById('modalAlumno');
+            if (e.target === modal) modal.style.display = 'none';
+        }
+
+        // Inicial
+        cargarSelects().then(cargarAlumnos);
+    </script>
+</body>
+</html>

@@ -14,6 +14,13 @@
         button.edit { background: #ffc107; }
         button.delete { background: #dc3545; color: white; }
 
+        /* Botón volver */
+        button.back {
+            background: #6c757d;
+            color: white;
+            margin-bottom: 15px;
+        }
+
         .modal {
             display: none; position: fixed; z-index: 10;
             left: 0; top: 0; width: 100%; height: 100%;
@@ -30,6 +37,9 @@
 </head>
 <body>
     <h2>Gestión de Usuarios</h2>
+
+    <!--Botón volver -->
+    <button class="back" onclick="volverDashboard()">← Volver al Dashboard</button>
     <button class="add" onclick="abrirModal()">+ Nuevo usuario</button>
 
     <table id="usuarios-table">
@@ -93,11 +103,6 @@
         const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
         const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
         const API_URL = `${API_BASE_URL}/api/usuarios`;
-
-        // 🔍 Debug temporal para verificar entorno y tokens
-        console.log("API_BASE_URL:", API_BASE_URL);
-        console.log("SCODA_API_KEY:", SCODA_API_KEY);
-        console.log("ACCESS_TOKEN:", ACCESS_TOKEN);
 
         if (ACCESS_TOKEN && !localStorage.getItem('access_token')) {
             localStorage.setItem('access_token', ACCESS_TOKEN);
@@ -247,11 +252,15 @@
         }
 
         // =============================
-        // CERRAR MODAL EXTERNO
+        // CERRAR MODAL EXTERNO Y VOLVER
         // =============================
         window.onclick = function(e) {
             const modal = document.getElementById('modalUsuario');
             if (e.target === modal) modal.style.display = 'none';
+        }
+
+        function volverDashboard() {
+            window.location.href = "/panel/dashboard/";
         }
 
         function cerrarSesion() {
