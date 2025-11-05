@@ -14,7 +14,6 @@ class UsuarioManager(BaseUserManager):
         return user
 
     def create_superuser(self, email=None, password=None, **extra_fields):
-        """Crear superusuario con rol admin"""
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -27,6 +26,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         APODERADO = "apoderado", "Apoderado"
         PROFESOR = "profesor", "Profesor"
         PORTERIA = "porteria", "Portería"
+        FURGON = "furgon", "Furgon"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, blank=True, null=True)   # opcional

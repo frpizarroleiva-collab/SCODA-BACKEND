@@ -1,3 +1,4 @@
+from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -7,20 +8,16 @@ from auditoria.mixins import AuditoriaMixin
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
+from estados.models import EstadoAlumno, HistorialEstadoAlumno 
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
-    """
-    ViewSet para gestionar personas del sistema SCODA.
-    Incluye el endpoint /personas/validar-run para verificar si
-    una persona existe, y listar sus relaciones (apoderado/alumnos).
-    """
     queryset = Persona.objects.all()
     serializer_class = PersonaSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
 
     # ----------------------------------------------------------
-    # VALIDAR RUN
+    # VALIDAR RUN + REGISTRAR RETIRO AUTOMÁTICO
     # ----------------------------------------------------------
     @action(
         detail=False,
@@ -30,6 +27,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     )
     def validar_run(self, request):
         run = request.data.get("run")
+        user = request.user
 
         # ----------------------------------------------------------
         # VALIDACIÓN DE ENTRADA
@@ -57,9 +55,9 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             # RELACIONES COMO APODERADO
             # ----------------------------------------------------------
             apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
-                persona=persona,
-                tipo_relacion='apoderado'
-            )
+                persona=persona
+            ).select_related('alumno__persona', 'alumno__curso')
+
             alumnos = [rel.alumno for rel in apoderados_qs]
 
             # ----------------------------------------------------------
@@ -96,9 +94,54 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             # ----------------------------------------------------------
             # EVALUACIÓN DE ESTADOS
             # ----------------------------------------------------------
-            es_apoderado = len(alumnos) > 0
+            es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in apoderados_qs)
             es_autorizado = any(rel.autorizado for rel in apoderados_qs)
-            mensaje_autorizado = "Autorizado" if es_autorizado else "No está autorizado"
+            mensaje_autorizado = "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
+
+            # ----------------------------------------------------------
+            # REGISTRO AUTOMÁTICO DE RETIRO
+            # ----------------------------------------------------------
+            if es_apoderado or es_autorizado:
+                for rel in apoderados_qs:
+                    alumno = rel.alumno
+                    curso = alumno.curso
+
+                    # Evitar duplicados
+                    existe = EstadoAlumno.objects.filter(
+                        alumno=alumno,
+                        fecha=date.today(),
+                        estado="RETIRADO"
+                    ).exists()
+
+                    if not existe:
+                        nuevo = EstadoAlumno.objects.create(
+                            alumno=alumno,
+                            curso=curso,
+                            fecha=date.today(),
+                            estado="RETIRADO",
+                            observacion="Validación QR",
+                            retirado_por=persona,
+                            usuario_registro=user
+                        )
+
+                        HistorialEstadoAlumno.objects.create(
+                            estado_alumno=nuevo,
+                            alumno=alumno,
+                            curso=curso,
+                            fecha=date.today(),
+                            estado="RETIRADO",
+                            observacion="Validación QR",
+                            usuario_registro=user,
+                            retirado_por=persona
+                        )
+
+                        # Auditoría automática
+                        self.registrar_auditoria(
+                            request,
+                            "CREAR",
+                            "EstadoAlumno",
+                            f"Retiro automático registrado para el alumno {alumno.persona.nombres} {alumno.persona.apellido_uno}"
+                        )
 
             # ----------------------------------------------------------
             # AUDITORÍA DE CONSULTA EXITOSA
@@ -115,12 +158,13 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             # ----------------------------------------------------------
             return Response({
                 "existe": True,
-                "persona": serializer.data,  # ✅ ahora incluye email si existe
+                "persona": serializer.data,
                 "es_apoderado": es_apoderado,
                 "alumnos_asociados": alumnos_data,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
-                "alumnos_autorizados": autorizaciones_data
+                "alumnos_autorizados": autorizaciones_data,
+                "mensaje": "Validación exitosa y retiro registrado." if es_apoderado or es_autorizado else "Validación exitosa."
             }, status=status.HTTP_200_OK)
 
         except Persona.DoesNotExist:
