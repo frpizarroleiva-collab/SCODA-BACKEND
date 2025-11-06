@@ -89,7 +89,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
             estado_upper = str(estado).upper().strip()
 
-            # --- Validar estado válido ---
             if estado_upper not in ESTADOS_VALIDOS:
                 procesados.append({
                     'alumno_id': alumno_id,
@@ -100,11 +99,8 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
-            # --- Validar si ya existe ---
             existente = EstadoAlumno.objects.filter(
-                alumno_id=alumno_id,
-                curso_id=curso_id,
-                fecha=fecha
+                alumno_id=alumno_id, curso_id=curso_id, fecha=fecha
             ).first()
             if existente:
                 procesados.append({
@@ -116,22 +112,14 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
-            # ----------------------------------------------------------
-            # VALIDACIÓN: quien retira debe estar autorizado o ser apoderado
-            # ----------------------------------------------------------
             if estado_upper == 'RETIRADO' and retirado_por_id:
                 autorizado = PersonaAutorizadaAlumno.objects.filter(
-                    alumno_id=alumno_id,
-                    persona_id=retirado_por_id,
-                    autorizado=True
+                    alumno_id=alumno_id, persona_id=retirado_por_id, autorizado=True
                 ).exists()
-
                 apoderado = PersonaAutorizadaAlumno.objects.filter(
-                    alumno_id=alumno_id,
-                    persona_id=retirado_por_id,
+                    alumno_id=alumno_id, persona_id=retirado_por_id,
                     tipo_relacion__icontains='apoderado'
                 ).exists()
-
                 if not (autorizado or apoderado):
                     procesados.append({
                         'alumno_id': alumno_id,
@@ -142,9 +130,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     })
                     continue
 
-            # ----------------------------------------------------------
-            # GUARDAR REGISTRO (guarda imagen Base64 directamente)
-            # ----------------------------------------------------------
             defaults = {
                 'estado': estado_upper,
                 'observacion': observacion,
@@ -153,24 +138,16 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
             if estado_upper == 'RETIRADO' and retirado_por_id:
                 defaults['retirado_por_id'] = retirado_por_id
-
             if foto_base64:
-                defaults['foto_documento'] = foto_base64  # Guardar texto Base64 directamente
+                defaults['foto_documento'] = foto_base64
 
             obj, _ = EstadoAlumno.objects.update_or_create(
-                alumno_id=alumno_id,
-                curso_id=curso_id,
-                fecha=fecha,
-                defaults=defaults
+                alumno_id=alumno_id, curso_id=curso_id, fecha=fecha, defaults=defaults
             )
 
             HistorialEstadoAlumno.objects.create(
-                estado_alumno=obj,
-                alumno_id=alumno_id,
-                curso_id=curso_id,
-                fecha=fecha,
-                estado=estado_upper,
-                observacion=observacion,
+                estado_alumno=obj, alumno_id=alumno_id, curso_id=curso_id,
+                fecha=fecha, estado=estado_upper, observacion=observacion,
                 usuario_registro=user,
                 retirado_por_id=retirado_por_id if estado_upper == 'RETIRADO' else None
             )
@@ -183,19 +160,19 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 'observacion': observacion
             })
 
-        # Auditoría
         self.registrar_auditoria(
             request, 'ACTUALIZAR', 'EstadoAlumno',
             f"Se procesaron {len(procesados)} registros para el curso {curso_id} ({fecha})"
         )
 
         return Response(
-            {'message': f'Se procesaron {len(procesados)} registros para el {fecha}.', 'detalle': procesados},
+            {'message': f'Se procesaron {len(procesados)} registros para el {fecha}.',
+             'detalle': procesados},
             status=status.HTTP_200_OK
         )
 
     # ----------------------------------------------------------
-    # HISTORIAL DE ESTADOS
+    # HISTORIAL
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='historial')
     def historial(self, request):
@@ -218,7 +195,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
         data = [
             {
-                'alumno': h.alumno.persona.nombres,
+                'alumno': f"{h.alumno.persona.nombres} {h.alumno.persona.apellido_uno} {h.alumno.persona.apellido_dos or ''}".strip(),
                 'curso': h.curso.nombre,
                 'fecha': h.fecha,
                 'estado': h.estado,
@@ -255,7 +232,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         data = EstadoAlumnoSerializer(queryset, many=True).data
 
         return Response({
-            "fecha": fecha,
+            "fecha": str(fecha),
             "curso_id": curso_id,
             "total_ausentes": len(data),
             "alumnos": data
@@ -264,7 +241,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='retiros')
     def listar_retiros(self, request):
         from alumnos.models import PersonaAutorizadaAlumno
-
         user = request.user
         if getattr(user, 'rol', '').lower() == 'apoderado':
             return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
@@ -291,19 +267,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             persona = alumno.persona
             curso = alumno.curso
             establecimiento = curso.establecimiento if curso else None
-
-            contactos = PersonaAutorizadaAlumno.objects.filter(alumno=alumno, autorizado=True)
-            contactos_autorizados = [
-                {
-                    "nombre": f"{c.persona.nombres} {c.persona.apellido_uno} {c.persona.apellido_dos or ''}".strip(),
-                    "relacion": c.tipo_relacion,
-                    "telefono": getattr(c.persona, 'fono', None),
-                    "correo": getattr(c.persona, 'email', None),
-                    "autorizado": "Sí" if c.autorizado else "No"
-                }
-                for c in contactos
-            ]
-
             retirado_por = getattr(estado, 'retirado_por', None)
             usuario_registro = estado.usuario_registro
 
@@ -318,10 +281,9 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "estado": estado.estado,
                 "hora_registro": estado.hora_registro,
                 "observacion": estado.observacion,
-                "foto_documento": estado.foto_documento,  # se devuelve directo al frontend
+                "foto_documento": estado.foto_documento,
                 "quien_retiro": f"{retirado_por.nombres} {retirado_por.apellido_uno}" if retirado_por else None,
-                "quien_registro": usuario_registro.email if usuario_registro else None,
-                "contactos_autorizados": contactos_autorizados
+                "quien_registro": usuario_registro.email if usuario_registro else None
             })
 
         return Response({
@@ -349,12 +311,36 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if curso_id:
             filtros['curso_id'] = curso_id
 
-        queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso').filter(**filtros)
-        data = EstadoAlumnoSerializer(queryset, many=True).data
+        queryset = EstadoAlumno.objects.select_related(
+            'alumno__persona', 'curso__establecimiento', 'usuario_registro'
+        ).filter(**filtros)
+
+        alumnos_data = []
+        for estado in queryset:
+            alumno = estado.alumno
+            persona = alumno.persona
+            curso = alumno.curso
+            establecimiento = curso.establecimiento if curso else None
+            usuario_registro = estado.usuario_registro
+
+            alumnos_data.append({
+                "id": estado.id,
+                "alumno": alumno.id,
+                "alumno_nombre": f"{persona.nombres} {persona.apellido_uno} {persona.apellido_dos or ''}".strip(),
+                "curso_id": curso.id if curso else None,
+                "curso_nombre": curso.nombre if curso else None,
+                "establecimiento": establecimiento.nombre if establecimiento else None,
+                "fecha": estado.fecha,
+                "estado": estado.estado,
+                "hora_registro": estado.hora_registro,
+                "observacion": estado.observacion,
+                "foto_documento": estado.foto_documento,
+                "quien_registro": usuario_registro.email if usuario_registro else None
+            })
 
         return Response({
-            "fecha": fecha,
+            "fecha": str(fecha),
             "curso_id": curso_id,
-            "total_extension": len(data),
-            "alumnos": data
+            "total_extension": len(alumnos_data),
+            "alumnos": alumnos_data
         }, status=status.HTTP_200_OK)

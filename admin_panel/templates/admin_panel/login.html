@@ -45,6 +45,7 @@
         .error, .success {
             text-align: center;
             font-size: 14px;
+            margin-top: 10px;
         }
         .error { color: red; }
         .success { color: green; }
@@ -53,6 +54,7 @@
 <body>
     <div class="login-box">
         <h2>Login</h2>
+
         <form method="POST">
             {% csrf_token %}
             <input type="email" name="email" placeholder="Correo electrónico" required>
@@ -60,23 +62,21 @@
             <button type="submit">Ingresar</button>
         </form>
 
+        <!-- Contenedor único para mensajes -->
         <div id="mensaje-login">
-            {% if messages %}
-                {% for msg in messages %}
-                    <p class="{% if msg.tags == 'error' %}error{% else %}success{% endif %}">
-                        {{ msg }}
-                    </p>
-                {% endfor %}
+            {% if error_message %}
+                <p class="error">{{ error_message }}</p>
             {% endif %}
         </div>
     </div>
 
     <script>
-        // Mostrar mensaje por parámetro solo si no hay messages de Django
+        // Capturar parámetro ?status= del backend
         const params = new URLSearchParams(window.location.search);
         const status = params.get('status');
         const msgDiv = document.getElementById('mensaje-login');
 
+        // Solo mostrar mensajes si no hay error del backend
         if (!msgDiv.innerHTML.trim()) {
             if (status === 'logout') {
                 msgDiv.innerHTML = '<p class="success">Sesión cerrada correctamente.</p>';

@@ -3,7 +3,6 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Usuario
 
@@ -12,10 +11,6 @@ from accounts.models import Usuario
 # FUNCIONES AUXILIARES
 # ---------------------------------------------------------
 def get_api_base_url():
-    """
-    Obtiene la URL base del backend, dependiendo del entorno.
-    Local por defecto (127.0.0.1) o la URL pública en Render.
-    """
     return (
         getattr(settings, "API_BASE_URL", None)
         or os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
@@ -23,7 +18,7 @@ def get_api_base_url():
 
 
 # ---------------------------------------------------------
-# LOGIN DEL PANEL ADMINISTRATIVO (sin requests)
+# LOGIN DEL PANEL ADMINISTRATIVO
 # ---------------------------------------------------------
 def login_view(request):
     if request.user.is_authenticated:
@@ -37,23 +32,20 @@ def login_view(request):
         if user is not None and user.rol == Usuario.Roles.ADMIN:
             login(request, user)
 
-            try:
-                # Generar tokens JWT directamente sin llamada HTTP
-                refresh = RefreshToken.for_user(user)
-                access_token = str(refresh.access_token)
+            # Generar token JWT directamente sin llamada externa
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
 
-                # Guardar en sesión para uso en frontend (fetch, headers, etc.)
-                request.session["ACCESS_TOKEN"] = access_token
+            # Guardar token para las vistas del panel
+            request.session["ACCESS_TOKEN"] = access_token
 
-                messages.success(request, "Inicio de sesión exitoso (token generado localmente).")
+            # Redirige con parámetro para mostrar mensaje en frontend
+            return redirect('/panel/dashboard/?status=success')
 
-            except Exception as e:
-                messages.error(request, f"Error generando el token JWT: {str(e)}")
-
-            return redirect('dashboard')
-
-        else:
-            messages.error(request, 'Credenciales inválidas o sin permisos de administrador.')
+        # Si las credenciales son inválidas o el rol no es admin
+        return render(request, 'admin_panel/login.html', {
+            'error_message': 'Credenciales inválidas o sin permisos de administrador.'
+        })
 
     return render(request, 'admin_panel/login.html')
 
@@ -65,8 +57,7 @@ def login_view(request):
 def dashboard(request):
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
-        messages.error(request, 'Tu cuenta no tiene permisos para acceder al panel.')
-        return redirect('login')
+        return redirect('/panel/?status=logout')
 
     return render(request, 'admin_panel/dashboard.html')
 
@@ -77,9 +68,9 @@ def dashboard(request):
 @login_required
 def logout_view(request):
     logout(request)
-    request.session.pop("ACCESS_TOKEN", None)
-    messages.success(request, 'Sesión cerrada correctamente.')
-    return redirect('login')
+    request.session.flush()
+    request.session.clear_expired()
+    return redirect('/panel/?status=logout')
 
 
 # ---------------------------------------------------------
@@ -89,7 +80,7 @@ def logout_view(request):
 def usuarios_view(request):
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
-        return redirect('login')
+        return redirect('/panel/?status=logout')
 
     context = {
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
@@ -103,7 +94,7 @@ def usuarios_view(request):
 def alumnos_view(request):
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
-        return redirect('login')
+        return redirect('/panel/?status=logout')
 
     context = {
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
@@ -117,7 +108,7 @@ def alumnos_view(request):
 def cursos_view(request):
     if request.user.rol != Usuario.Roles.ADMIN:
         logout(request)
-        return redirect('login')
+        return redirect('/panel/?status=logout')
 
     context = {
         "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),

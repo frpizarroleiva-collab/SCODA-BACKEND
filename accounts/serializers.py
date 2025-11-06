@@ -47,7 +47,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return attrs
 
     # ----------------------------------------------------------
-    # CREACIÓN DE USUARIO (con transacción)
+    # CREACIÓN DE USUARIO
     # ----------------------------------------------------------
     def create(self, validated_data):
         persona_data = {
@@ -123,7 +123,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
     # FUNCIONES AUXILIARES
     # ----------------------------------------------------------
     def _actualizar_persona(self, persona, data, usuario):
-        """Sincroniza campos entre Usuario y Persona."""
         updated = False
 
         if persona.nombres != (usuario.first_name or ''):
