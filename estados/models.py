@@ -23,7 +23,7 @@ class EstadoAlumno(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADOS_CHOICES)
     hora_registro = models.DateTimeField(auto_now=True)
 
-    # Usuario que registra el estado en el sistema (profesor, portería, etc.)
+    # Usuario que registra el estado (profesor, portería, etc.)
     usuario_registro = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -42,6 +42,13 @@ class EstadoAlumno(models.Model):
     )
 
     observacion = models.TextField(blank=True, null=True)
+
+    # Imagen almacenada directamente en Base64
+    foto_documento = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Imagen en formato Base64 (data:image/jpeg;base64,...)"
+    )
 
     class Meta:
         db_table = 'estado_alumno'
@@ -66,7 +73,7 @@ class HistorialEstadoAlumno(models.Model):
     estado = models.CharField(max_length=20)
     observacion = models.TextField(blank=True, null=True)
 
-    # Usuario que registra el cambio de estado (auditoría del sistema)
+    # Usuario que registra el cambio (auditoría)
     usuario_registro = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -74,7 +81,6 @@ class HistorialEstadoAlumno(models.Model):
         blank=True
     )
 
-    # Persona que retiró al alumno (si aplica)
     retirado_por = models.ForeignKey(
         'personas.Persona',
         on_delete=models.SET_NULL,
@@ -90,8 +96,6 @@ class HistorialEstadoAlumno(models.Model):
         verbose_name = 'Historial de Estado de Alumno'
         verbose_name_plural = 'Historiales de Estados de Alumnos'
         ordering = ['-hora_cambio']
-        # Un alumno puede tener varios estados distintos por día,
-        # pero no el mismo estado repetido el mismo día.
         constraints = [
             models.UniqueConstraint(
                 fields=['alumno', 'fecha', 'estado'],

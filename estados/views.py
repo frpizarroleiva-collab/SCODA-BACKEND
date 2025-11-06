@@ -82,6 +82,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             estado = reg.get('estado')
             observacion = reg.get('observacion', '')
             retirado_por_id = reg.get('retirado_por_id')
+            foto_base64 = reg.get('foto_documento')
 
             if not alumno_id or not estado:
                 continue
@@ -139,18 +140,22 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                         'codigo_bloqueo': 910,
                         'observacion': "La persona indicada no está autorizada ni registrada como apoderado del alumno."
                     })
-                    continue  # salta el registro, no se guarda
+                    continue
 
             # ----------------------------------------------------------
-            # GUARDAR REGISTRO
+            # GUARDAR REGISTRO (guarda imagen Base64 directamente)
             # ----------------------------------------------------------
             defaults = {
                 'estado': estado_upper,
                 'observacion': observacion,
                 'usuario_registro': user
             }
+
             if estado_upper == 'RETIRADO' and retirado_por_id:
                 defaults['retirado_por_id'] = retirado_por_id
+
+            if foto_base64:
+                defaults['foto_documento'] = foto_base64  # Guardar texto Base64 directamente
 
             obj, _ = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
@@ -313,6 +318,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "estado": estado.estado,
                 "hora_registro": estado.hora_registro,
                 "observacion": estado.observacion,
+                "foto_documento": estado.foto_documento,  # se devuelve directo al frontend
                 "quien_retiro": f"{retirado_por.nombres} {retirado_por.apellido_uno}" if retirado_por else None,
                 "quien_registro": usuario_registro.email if usuario_registro else None,
                 "contactos_autorizados": contactos_autorizados
