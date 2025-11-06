@@ -40,7 +40,7 @@
             cursor: pointer;
         }
         button:hover {
-            background: #0ea340ff;
+            background: #0c8f38;
         }
         .error, .success {
             text-align: center;
@@ -60,13 +60,30 @@
             <button type="submit">Ingresar</button>
         </form>
 
-        {% if messages %}
-            {% for msg in messages %}
-                <p class="{% if msg.tags == 'error' %}error{% else %}success{% endif %}">
-                    {{ msg }}
-                </p>
-            {% endfor %}
-        {% endif %}
+        <div id="mensaje-login">
+            {% if messages %}
+                {% for msg in messages %}
+                    <p class="{% if msg.tags == 'error' %}error{% else %}success{% endif %}">
+                        {{ msg }}
+                    </p>
+                {% endfor %}
+            {% endif %}
+        </div>
     </div>
+
+    <script>
+        // Mostrar mensaje por parámetro solo si no hay messages de Django
+        const params = new URLSearchParams(window.location.search);
+        const status = params.get('status');
+        const msgDiv = document.getElementById('mensaje-login');
+
+        if (!msgDiv.innerHTML.trim()) {
+            if (status === 'logout') {
+                msgDiv.innerHTML = '<p class="success">Sesión cerrada correctamente.</p>';
+            } else if (status === 'success') {
+                msgDiv.innerHTML = '<p class="success">Inicio de sesión exitoso.</p>';
+            }
+        }
+    </script>
 </body>
 </html>
