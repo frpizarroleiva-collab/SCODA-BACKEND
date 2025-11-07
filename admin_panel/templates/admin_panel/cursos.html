@@ -9,11 +9,13 @@
         table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background: #007BFF; color: white; }
+        input[type="time"] { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; }
         button.add { background: #28a745; color: white; margin-bottom: 10px; }
         button.edit { background: #ffc107; }
         button.delete { background: #dc3545; color: white; }
-        button.view { background: #17a2b8; color: white; } /* Nuevo botón */
+        button.view { background: #17a2b8; color: white; }
+        button.save { background: #007BFF; color: white; }
         button.back { background: #6c757d; color: white; margin-bottom: 15px; }
 
         .modal {
@@ -28,9 +30,7 @@
             width: 100%; padding: 8px; margin: 8px 0;
             border: 1px solid #ccc; border-radius: 6px;
         }
-        table.alumnos {
-            width: 100%; border-collapse: collapse; margin-top: 10px;
-        }
+        table.alumnos { width: 100%; border-collapse: collapse; margin-top: 10px; }
         table.alumnos th { background: #17a2b8; color: white; }
         table.alumnos td, table.alumnos th { border: 1px solid #ddd; padding: 6px; }
     </style>
@@ -49,7 +49,8 @@
                 <th>Nivel</th>
                 <th>Profesor</th>
                 <th>Establecimiento</th>
-                <th>Alumnos</th>
+                <th>Inicio</th>
+                <th>Término</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -142,6 +143,8 @@
                 const tbody = document.querySelector('#cursos-table tbody');
                 tbody.innerHTML = '';
                 data.forEach((c, i) => {
+                    const horaInicio = c.hora_inicio ? c.hora_inicio.slice(0,5) : '08:00';
+                    const horaTermino = c.hora_termino ? c.hora_termino.slice(0,5) : '15:30';
                     tbody.innerHTML += `
                         <tr data-id="${c.id}">
                             <td>${i + 1}</td>
@@ -149,11 +152,13 @@
                             <td>${c.nivel}</td>
                             <td>${c.profesor_nombre || '—'}</td>
                             <td>${c.establecimiento_nombre || '—'}</td>
-                            <td>${c.cantidad_alumnos || 0}</td>
+                            <td><input type="time" id="inicio-${c.id}" value="${horaInicio}"></td>
+                            <td><input type="time" id="termino-${c.id}" value="${horaTermino}"></td>
                             <td>
-                                <button class="view" onclick="verAlumnos(${c.id})">👁 Ver alumnos</button>
-                                <button class="edit" onclick="editarCurso(${c.id})">Editar</button>
-                                <button class="delete" onclick="eliminarCurso(${c.id})">Eliminar</button>
+                                <button class="save" onclick="actualizarHorario(${c.id})">Guardar horario</button>
+                                <button class="view" onclick="verAlumnos(${c.id})">👁 Ver</button>
+                                <button class="edit" onclick="editarCurso(${c.id})">✏️</button>
+                                <button class="delete" onclick="eliminarCurso(${c.id})">🗑</button>
                             </td>
                         </tr>`;
                 });
@@ -164,7 +169,32 @@
         }
 
         // =============================
-        // MODALES
+        // ACTUALIZAR HORARIO
+        // =============================
+        async function actualizarHorario(id) {
+            const hora_inicio = document.getElementById(`inicio-${id}`).value;
+            const hora_termino = document.getElementById(`termino-${id}`).value;
+
+            try {
+                const res = await fetch(`${API_URL}/${id}/actualizar-horario`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ hora_inicio, hora_termino })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`Horario actualizado: ${data.hora_inicio} - ${data.hora_termino}`);
+                } else {
+                    alert(data.error || 'Error al actualizar horario');
+                }
+            } catch (error) {
+                console.error('Error al actualizar horario:', error);
+                alert('Error al guardar horario.');
+            }
+        }
+
+        // =============================
+        // MODALES / CRUD / VER ALUMNOS
         // =============================
         function abrirModal(curso = null) {
             const modal = document.getElementById('modalCurso');
@@ -180,13 +210,9 @@
                 document.getElementById('establecimiento').value = curso.establecimiento || '';
             }
         }
-        function cerrarModal() {
-            document.getElementById('modalCurso').style.display = 'none';
-        }
 
-        // =============================
-        // GUARDAR (CREATE/UPDATE)
-        // =============================
+        function cerrarModal() { document.getElementById('modalCurso').style.display = 'none'; }
+
         async function guardarCurso(e) {
             e.preventDefault();
             const id = document.getElementById('cursoIdHidden').value;
@@ -216,9 +242,6 @@
             }
         }
 
-        // =============================
-        // VER ALUMNOS
-        // =============================
         async function verAlumnos(cursoId) {
             const modal = document.getElementById('modalAlumnos');
             const cont = document.getElementById('alumnosContainer');
@@ -238,25 +261,16 @@
                 let tabla = `
                     <table class="alumnos">
                         <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Nombre</th>
-                                <th>RUN</th>
-                                <th>Estado actual</th>
-                                <th>Observación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
+                            <tr><th>#</th><th>Nombre</th><th>RUN</th><th>Estado actual</th><th>Observación</th></tr>
+                        </thead><tbody>`;
                 alumnos.forEach((a, i) => {
-                    tabla += `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td>${a.nombre_completo}</td>
-                            <td>${a.rut}</td>
-                            <td>${a.estado_actual}</td>
-                            <td>${a.observacion || '—'}</td>
-                        </tr>`;
+                    tabla += `<tr>
+                        <td>${i + 1}</td>
+                        <td>${a.nombre_completo}</td>
+                        <td>${a.rut}</td>
+                        <td>${a.estado_actual}</td>
+                        <td>${a.observacion || '—'}</td>
+                    </tr>`;
                 });
                 tabla += '</tbody></table>';
                 cont.innerHTML = tabla;
@@ -266,13 +280,8 @@
             }
         }
 
-        function cerrarModalAlumnos() {
-            document.getElementById('modalAlumnos').style.display = 'none';
-        }
+        function cerrarModalAlumnos() { document.getElementById('modalAlumnos').style.display = 'none'; }
 
-        // =============================
-        // ELIMINAR
-        // =============================
         function eliminarCurso(id) {
             if (confirm("¿Seguro que deseas eliminar este curso?")) {
                 fetch(`${API_URL}/${id}`, { method: "DELETE", headers: getHeaders() })
@@ -285,9 +294,7 @@
             }
         }
 
-        function volverDashboard() {
-            window.location.href = "/panel/dashboard/";
-        }
+        function volverDashboard() { window.location.href = "/panel/dashboard/"; }
 
         window.onclick = function(e) {
             const modal1 = document.getElementById('modalCurso');

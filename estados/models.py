@@ -50,6 +50,12 @@ class EstadoAlumno(models.Model):
         help_text="Imagen en formato Base64 (data:image/jpeg;base64,...)"
     )
 
+    # Nuevo campo: indica si el retiro fue antes del horario de término del curso
+    retiro_anticipado = models.BooleanField(
+        default=False,
+        help_text="Indica si el retiro ocurrió antes del horario de término del curso."
+    )
+
     class Meta:
         db_table = 'estado_alumno'
         verbose_name = 'Estado de Alumno'
@@ -58,7 +64,8 @@ class EstadoAlumno(models.Model):
 
     def __str__(self):
         alumno_nombre = getattr(self.alumno.persona, "nombres", "Sin nombre")
-        return f"{alumno_nombre} - {self.estado} ({self.fecha})"
+        anticipado = " (Anticipado)" if self.retiro_anticipado else ""
+        return f"{alumno_nombre} - {self.estado} ({self.fecha}){anticipado}"
 
 
 class HistorialEstadoAlumno(models.Model):

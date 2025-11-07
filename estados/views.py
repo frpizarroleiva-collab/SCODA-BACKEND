@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from auditoria.mixins import AuditoriaMixin
 from .models import EstadoAlumno, HistorialEstadoAlumno
 from .serializers import EstadoAlumnoSerializer
+from escuela.models import Curso  # 👈 agregado para obtener hora_termino del curso
 
 
 class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -145,6 +146,18 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 alumno_id=alumno_id, curso_id=curso_id, fecha=fecha, defaults=defaults
             )
 
+            # -----------------------------------------------------
+            # ✅ NUEVO: DETECTAR RETIRO ANTICIPADO
+            # -----------------------------------------------------
+            if estado_upper == 'RETIRADO':
+                curso = Curso.objects.filter(id=curso_id).first()
+                if curso and getattr(curso, 'hora_termino', None):
+                    hora_termino = curso.hora_termino
+                    hora_actual = datetime.now().time()
+                    if hora_actual < hora_termino:
+                        obj.retiro_anticipado = True
+                        obj.save(update_fields=['retiro_anticipado'])
+
             HistorialEstadoAlumno.objects.create(
                 estado_alumno=obj, alumno_id=alumno_id, curso_id=curso_id,
                 fecha=fecha, estado=estado_upper, observacion=observacion,
@@ -157,7 +170,8 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 'estado': estado_upper,
                 'codigo_estado': ESTADOS_VALIDOS.get(estado_upper, 0),
                 'codigo_bloqueo': 0,
-                'observacion': observacion
+                'observacion': observacion,
+                'retiro_anticipado': getattr(obj, 'retiro_anticipado', False)
             })
 
         self.registrar_auditoria(
@@ -208,7 +222,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
     # ----------------------------------------------------------
-    # LISTAR AUSENTES / RETIROS / EXTENSIÓN
+    # LISTAR AUSENTES / RETIROS / EXTENSIÓN / RETIROS ANTICIPADOS
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='ausentes')
     def listar_ausentes(self, request):
@@ -283,7 +297,8 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "observacion": estado.observacion,
                 "foto_documento": estado.foto_documento,
                 "quien_retiro": f"{retirado_por.nombres} {retirado_por.apellido_uno}" if retirado_por else None,
-                "quien_registro": usuario_registro.email if usuario_registro else None
+                "quien_registro": usuario_registro.email if usuario_registro else None,
+                "retiro_anticipado": estado.retiro_anticipado
             })
 
         return Response({
@@ -291,6 +306,38 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "curso_id": curso_id,
             "total_retiros": len(alumnos_data),
             "alumnos": alumnos_data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='retiros-anticipados')
+    def listar_retiros_anticipados(self, request):
+        """Nuevo endpoint: listar solo retiros anticipados."""
+        user = request.user
+        if getattr(user, 'rol', '').lower() == 'apoderado':
+            return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+        fecha_str = request.query_params.get('fecha')
+        curso_id = request.query_params.get('curso_id')
+
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else date.today()
+        except ValueError:
+            fecha = date.today()
+
+        filtros = {'fecha': fecha, 'estado': 'RETIRADO', 'retiro_anticipado': True}
+        if curso_id:
+            filtros['curso_id'] = curso_id
+
+        queryset = EstadoAlumno.objects.select_related(
+            'alumno__persona', 'curso__establecimiento', 'usuario_registro', 'retirado_por'
+        ).filter(**filtros)
+
+        data = EstadoAlumnoSerializer(queryset, many=True).data
+
+        return Response({
+            "fecha": str(fecha),
+            "curso_id": curso_id,
+            "total_retiros_anticipados": len(data),
+            "alumnos": data
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='extension')

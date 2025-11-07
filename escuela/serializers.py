@@ -1,14 +1,16 @@
 from rest_framework import serializers
 from .models import Curso
 from alumnos.models import Alumno
-
-
 class CursoSerializer(serializers.ModelSerializer):
     profesor_nombre = serializers.SerializerMethodField(read_only=True)
     establecimiento_nombre = serializers.CharField(
         source='establecimiento.nombre', read_only=True
     )
-    cantidad_alumnos = serializers.SerializerMethodField(read_only=True)  # 👈 nuevo campo seguro
+    cantidad_alumnos = serializers.SerializerMethodField(read_only=True)
+
+    # Nuevos campos: horarios del curso
+    hora_inicio = serializers.TimeField(required=False)
+    hora_termino = serializers.TimeField(required=False)
 
     class Meta:
         model = Curso
@@ -16,19 +18,16 @@ class CursoSerializer(serializers.ModelSerializer):
             'id', 'nombre', 'nivel',
             'establecimiento', 'establecimiento_nombre',
             'profesor', 'profesor_nombre',
-            'cantidad_alumnos',  # 👈 agregado sin quitar nada existente
+            'cantidad_alumnos',
+            'hora_inicio', 'hora_termino',
         ]
 
     def get_profesor_nombre(self, obj):
-        """Devuelve el nombre completo del profesor (si existe)."""
         if obj.profesor:
             return f"{obj.profesor.nombres} {obj.profesor.apellido_uno}"
         return None
 
     def get_cantidad_alumnos(self, obj):
-        """Cuenta los alumnos asociados al curso sin generar queries extra."""
-        # Gracias al prefetch_related('alumnos__persona') en el ViewSet,
-        # este conteo no hace consultas adicionales.
         return obj.alumnos.count()
 
 

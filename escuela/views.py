@@ -4,14 +4,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
 from django.db.models import OuterRef, Subquery
-from auditoria.mixins import AuditoriaMixin  # 👈 agregado
+from auditoria.mixins import AuditoriaMixin
 from .models import Curso
 from .serializers import CursoSerializer
 from alumnos.models import Alumno
 from estados.models import EstadoAlumno
 
 
-class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mixin
+class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CursoSerializer
 
@@ -25,7 +25,6 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mi
             .prefetch_related('alumnos__persona')
         )
 
-        # Los apoderados no pueden listar cursos
         if rol == 'apoderado':
             return Curso.objects.none()
 
@@ -39,11 +38,8 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mi
         serializer.is_valid(raise_exception=True)
         curso = serializer.save()
 
-        # Registrar auditoría
         self.registrar_auditoria(
-            request,
-            'CREAR',
-            'Curso',
+            request, 'CREAR', 'Curso',
             f"Se creó el curso '{curso.nombre}' con ID {curso.id}"
         )
 
@@ -59,11 +55,8 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mi
         serializer.is_valid(raise_exception=True)
         curso = serializer.save()
 
-        # Registrar auditoría
         self.registrar_auditoria(
-            request,
-            'ACTUALIZAR',
-            'Curso',
+            request, 'ACTUALIZAR', 'Curso',
             f"Se actualizó el curso '{curso.nombre}' (ID {curso.id})"
         )
 
@@ -76,11 +69,8 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mi
         instance = self.get_object()
         nombre = instance.nombre
 
-        #Registrar auditoría antes de eliminar
         self.registrar_auditoria(
-            request,
-            'ELIMINAR',
-            'Curso',
+            request, 'ELIMINAR', 'Curso',
             f"Se eliminó el curso '{nombre}'"
         )
 
@@ -142,3 +132,38 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):  # 👈 hereda del mi
         ]
 
         return paginator.get_paginated_response(data)
+
+    # ----------------------------------------------------------
+    # NUEVO: ACTUALIZAR HORARIO DEL CURSO
+    # ----------------------------------------------------------
+    @action(detail=True, methods=['put'], url_path='actualizar-horario')
+    def actualizar_horario(self, request, pk=None):
+        try:
+            curso = self.get_object()
+            hora_inicio = request.data.get('hora_inicio')
+            hora_termino = request.data.get('hora_termino')
+
+            if not (hora_inicio and hora_termino):
+                return Response(
+                    {"error": "Debe enviar ambos campos: hora_inicio y hora_termino."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            curso.hora_inicio = hora_inicio
+            curso.hora_termino = hora_termino
+            curso.save()
+
+            self.registrar_auditoria(
+                request, 'ACTUALIZAR', 'Curso',
+                f"Se actualizó horario de '{curso.nombre}' ({hora_inicio} - {hora_termino})"
+            )
+
+            return Response({
+                "message": "Horario actualizado correctamente.",
+                "curso": curso.nombre,
+                "hora_inicio": str(curso.hora_inicio),
+                "hora_termino": str(curso.hora_termino)
+            }, status=status.HTTP_200_OK)
+
+        except Curso.DoesNotExist:
+            return Response({"error": "Curso no encontrado."}, status=status.HTTP_404_NOT_FOUND)
