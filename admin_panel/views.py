@@ -59,9 +59,12 @@ def dashboard(request):
         logout(request)
         return redirect('/panel/?status=logout')
 
-    return render(request, 'admin_panel/dashboard.html')
-
-
+    context = {
+        "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
+    }
+    return render(request, "admin_panel/dashboard.html", context)
 # ---------------------------------------------------------
 # LOGOUT
 # ---------------------------------------------------------
@@ -116,3 +119,17 @@ def cursos_view(request):
         "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/cursos.html", context)
+
+
+@login_required
+def personas_view(request):
+    if request.user.rol != Usuario.Roles.ADMIN:
+        logout(request)
+        return redirect('/panel/?status=logout')
+
+    context = {
+        "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
+    }
+    return render(request, "admin_panel/personas.html", context)

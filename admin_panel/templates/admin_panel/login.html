@@ -2,86 +2,198 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Login - Panel SCODA</title>
+    <title>Iniciar sesión | SCODA</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
+            font-family: "Inter", Arial, sans-serif;
+            background: #f7f9fa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        main {
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
         }
+
+        /* Caja principal sin efecto flotante */
         .login-box {
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            width: 320px;
-        }
-        h2 {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 18px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            width: 340px;
             text-align: center;
-            color: #0ea340ff;
+            box-sizing: border-box;
         }
+
+        .logo {
+            width: 70px;
+            height: 70px;
+            margin-bottom: 10px;
+            object-fit: contain;
+        }
+
+        h2 {
+            color: #08ad3a;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        /* Inputs y grupo */
+        .input-group {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
         input {
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
+            padding: 12px 40px 12px 12px;
+            border: 1px solid #dcdcdc;
             border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box; /* 🔹 evita desbordar el cuadro */
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        button {
+
+        input:focus {
+            border-color: #08ad3a;
+            box-shadow: 0 0 0 2px rgba(8, 173, 58, 0.15);
+            outline: none;
+        }
+
+        /* Botón del ojo */
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .toggle-password svg {
+            width: 20px;
+            height: 20px;
+            fill: #666;
+        }
+
+        .toggle-password:hover svg {
+            fill: #08ad3a;
+        }
+
+        /* Botón principal */
+        button[type="submit"] {
             width: 100%;
-            padding: 10px;
-            background: #0ea340ff;
-            color: white;
+            padding: 12px;
+            background: #08ad3a;
+            color: #fff;
             border: none;
             border-radius: 8px;
             cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+            box-sizing: border-box;
         }
-        button:hover {
-            background: #0c8f38;
+
+        button[type="submit"]:hover {
+            background: #06952f;
         }
+
         .error, .success {
             text-align: center;
-            font-size: 14px;
-            margin-top: 10px;
+            font-size: 13px;
+            margin-top: 12px;
         }
-        .error { color: red; }
-        .success { color: green; }
+
+        .error { color: #d9534f; }
+        .success { color: #28a745; }
+
+        footer {
+            text-align: center;
+            margin-top: 25px;
+            padding: 15px 0;
+            font-size: 12px;
+            color: #888;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h2>Login</h2>
+    <main>
+        <div class="login-box">
+            {% comment %} <img src="/static/img/logo-scoda.png" alt="SCODA Logo" class="logo"> {% endcomment %}
 
-        <form method="POST">
-            {% csrf_token %}
-            <input type="email" name="email" placeholder="Correo electrónico" required>
-            <input type="password" name="password" placeholder="Contraseña" required>
-            <button type="submit">Ingresar</button>
-        </form>
+            <h2>Bienvenido a SCODA</h2>
+            <p class="subtitle">Sistema seguro de salida de estudiantes</p>
 
-        <!-- Contenedor único para mensajes -->
-        <div id="mensaje-login">
-            {% if error_message %}
-                <p class="error">{{ error_message }}</p>
-            {% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <div class="input-group">
+                    <input type="email" name="email" placeholder="Correo electrónico" required>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" id="password" name="password" placeholder="Contraseña" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword()">
+                        <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <button type="submit">Ingresar</button>
+            </form>
+
+            <div id="mensaje-login">
+                {% if error_message %}
+                    <p class="error">{{ error_message }}</p>
+                {% endif %}
+            </div>
         </div>
-    </div>
+    </main>
+
+    <footer>
+        © {{ year|default:"2025" }} SCODA — Sistema de Control de Autorización de Salidas
+    </footer>
 
     <script>
-        // Capturar parámetro ?status= del backend
         const params = new URLSearchParams(window.location.search);
         const status = params.get('status');
         const msgDiv = document.getElementById('mensaje-login');
 
-        // Solo mostrar mensajes si no hay error del backend
         if (!msgDiv.innerHTML.trim()) {
             if (status === 'logout') {
                 msgDiv.innerHTML = '<p class="success">Sesión cerrada correctamente.</p>';
             } else if (status === 'success') {
                 msgDiv.innerHTML = '<p class="success">Inicio de sesión exitoso.</p>';
+            }
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = '<path d="M12 5c-4.97 0-9.27 3.11-11 7 1.16 2.6 3.59 4.87 6.65 6.13l1.07-1.73C6.16 15.3 4.23 13.74 3 12c1.73-3.89 6-7 11-7 1.1 0 2.16.16 3.17.46l1.17-1.93C16.73 5.19 14.41 5 12 5zm0 2a5 5 0 00-5 5c0 1.32.53 2.53 1.38 3.41l1.46-1.46A3 3 0 1115 12a3 3 0 01-1.17 2.41l1.46 1.46A5 5 0 0017 12a5 5 0 00-5-5z"/>';
+            } else {
+                input.type = 'password';
+                icon.innerHTML = '<path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/>';
             }
         }
     </script>
