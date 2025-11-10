@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -8,8 +8,6 @@ from auditoria.mixins import AuditoriaMixin
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
-from estados.models import EstadoAlumno, HistorialEstadoAlumno
-from escuela.models import Curso
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -18,7 +16,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasAPIKey]
 
     # ----------------------------------------------------------
-    # VALIDAR RUN + CREAR RETIRO AUTOMÁTICO (QR)
+    # VALIDAR RUN (solo consulta, sin crear retiros)
     # ----------------------------------------------------------
     @action(
         detail=False,
@@ -28,7 +26,6 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     )
     def validar_run(self, request):
         run = request.data.get("run")
-        user = request.user
 
         # ----------------------------------------------------------
         # VALIDACIÓN DE ENTRADA
@@ -39,125 +36,104 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "mensaje": "Debes enviar un RUN en el body"
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # ----------------------------------------------------------
         # LIMPIEZA DEL RUN
         # ----------------------------------------------------------
         run = run.replace(".", "").replace(" ", "").upper()
+        print(f"RUN recibido: '{run}'")
 
         try:
             # ----------------------------------------------------------
-            # BUSCAR PERSONA
+            # BÚSQUEDA DE PERSONA
             # ----------------------------------------------------------
             persona = Persona.objects.get(run__iexact=run)
             serializer = PersonaBasicaSerializer(persona)
-            relaciones = PersonaAutorizadaAlumno.objects.filter(
+
+            # ----------------------------------------------------------
+            # RELACIONES COMO APODERADO O AUTORIZADO
+            # ----------------------------------------------------------
+            apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
                 persona=persona
             ).select_related('alumno__persona', 'alumno__curso')
 
-            if not relaciones.exists():
-                # No tiene alumnos asociados o no está autorizado
-                self.registrar_auditoria(
-                    request,
-                    'CONSULTA',
-                    'Persona',
-                    f"Validación de RUN {run} - sin alumnos asociados"
-                )
-                return Response({
-                    "existe": True,
-                    "persona": serializer.data,
-                    "es_apoderado": False,
-                    "es_autorizado": False,
-                    "mensaje_autorizado": "No está autorizado a retirar alumnos",
-                    "alumnos_autorizados": [],
-                    "mensaje": "Validación exitosa, pero sin permisos de retiro."
-                }, status=status.HTTP_200_OK)
-
-            es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in relaciones)
-            es_autorizado = any(rel.autorizado for rel in relaciones)
-            mensaje_autorizado = "Autorizado" if (es_apoderado or es_autorizado) else "No está autorizado"
-
-            retiros_creados = []
-            for rel in relaciones:
-                alumno = rel.alumno
-                curso = alumno.curso
-
-                # Evitar duplicados
-                existe = EstadoAlumno.objects.filter(
-                    alumno=alumno,
-                    fecha=date.today(),
-                    estado="RETIRADO"
-                ).exists()
-                if existe:
-                    continue
-
-                nuevo_estado = EstadoAlumno.objects.create(
-                    alumno=alumno,
-                    curso=curso,
-                    fecha=date.today(),
-                    estado="RETIRADO",
-                    observacion="Validación QR",
-                    retirado_por=persona,      
-                    usuario_registro=user  
-                )
-
-                # Detectar retiro anticipado
-                if curso and getattr(curso, "hora_termino", None):
-                    hora_termino = curso.hora_termino
-                    hora_actual = datetime.now().time()
-                    if hora_actual < hora_termino:
-                        nuevo_estado.retiro_anticipado = True
-                        nuevo_estado.save(update_fields=["retiro_anticipado"])
-
-                # Crear historial del estado
-                HistorialEstadoAlumno.objects.create(
-                    estado_alumno=nuevo_estado,
-                    alumno=alumno,
-                    curso=curso,
-                    fecha=date.today(),
-                    estado="RETIRADO",
-                    observacion="Validación QR",
-                    usuario_registro=user,
-                    retirado_por=persona
-                )
-
-                # Agregar al resumen de respuesta
-                retiros_creados.append({
-                    "alumno_id": alumno.id,
-                    "alumno_nombre": f"{alumno.persona.nombres} {alumno.persona.apellido_uno}",
-                    "curso": curso.nombre if curso else None,
-                    "retiro_anticipado": nuevo_estado.retiro_anticipado,
-                })
+            alumnos = [rel.alumno for rel in apoderados_qs]
 
             # ----------------------------------------------------------
-            # AUDITORÍA
+            # LISTA DE ALUMNOS ASOCIADOS
+            # ----------------------------------------------------------
+            alumnos_data = [
+                {
+                    "id_alumno": a.id,
+                    "nombres": a.persona.nombres,
+                    "apellido_uno": a.persona.apellido_uno,
+                    "apellido_dos": a.persona.apellido_dos,
+                    "id_curso": a.curso.id if a.curso else None,
+                    "curso_nombre": a.curso.nombre if a.curso else None
+                }
+                for a in alumnos
+            ]
+
+            # ----------------------------------------------------------
+            # LISTA DETALLADA DE AUTORIZACIONES
+            # ----------------------------------------------------------
+            autorizaciones_data = [
+                {
+                    "id_relacion": rel.id,
+                    "id_alumno": rel.alumno.id,
+                    "alumno": f"{rel.alumno.persona.nombres} {rel.alumno.persona.apellido_uno} {rel.alumno.persona.apellido_dos or ''}".strip(),
+                    "id_curso": rel.alumno.curso.id if rel.alumno.curso else None,
+                    "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
+                    "tipo_relacion": rel.tipo_relacion,
+                    "autorizado": rel.autorizado
+                }
+                for rel in apoderados_qs
+            ]
+
+            # ----------------------------------------------------------
+            # EVALUACIÓN DE ESTADOS (solo información)
+            # ----------------------------------------------------------
+            es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in apoderados_qs)
+            es_autorizado = any(rel.autorizado for rel in apoderados_qs)
+            mensaje_autorizado = "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
+
+            # ----------------------------------------------------------
+            # AUDITORÍA DE CONSULTA EXITOSA
             # ----------------------------------------------------------
             self.registrar_auditoria(
                 request,
-                "CREAR",
-                "EstadoAlumno",
-                f"Validación QR por {persona.nombres} {persona.apellido_uno} - {len(retiros_creados)} retiros creados"
+                'CONSULTA',
+                'Persona',
+                f"Validación de RUN {run} - Resultado: ENCONTRADO"
             )
-            
+
+            # ----------------------------------------------------------
+            # RESPUESTA FINAL
+            # ----------------------------------------------------------
             return Response({
                 "existe": True,
                 "persona": serializer.data,
                 "es_apoderado": es_apoderado,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
-                "retiros_creados": retiros_creados,
-                "mensaje": (
-                    f"Validación exitosa. Se registraron {len(retiros_creados)} retiros automáticos."
-                    if retiros_creados else
-                    "Validación exitosa. No se crearon nuevos retiros (ya existían)."
-                )
+                "alumnos_asociados": alumnos_data,
+                "alumnos_autorizados": autorizaciones_data,
+                "mensaje": "Validación exitosa."
             }, status=status.HTTP_200_OK)
 
         except Persona.DoesNotExist:
+            # ----------------------------------------------------------
+            # AUDITORÍA DE CONSULTA FALLIDA
+            # ----------------------------------------------------------
             self.registrar_auditoria(
                 request,
                 'CONSULTA',
                 'Persona',
                 f"Intento de validación de RUN {run} - Persona no encontrada"
             )
+
+            # ----------------------------------------------------------
+            # RESPUESTA DE ERROR
+            # ----------------------------------------------------------
             return Response({
                 "existe": False,
                 "mensaje": "No se encontró una persona con ese RUN"
