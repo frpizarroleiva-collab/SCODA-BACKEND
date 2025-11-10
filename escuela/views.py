@@ -1,3 +1,4 @@
+from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
@@ -78,7 +79,7 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response({"message": "Curso eliminado con éxito"}, status=status.HTTP_204_NO_CONTENT)
 
     # ----------------------------------------------------------
-    # LISTAR ALUMNOS DEL CURSO
+    # LISTAR ALUMNOS DEL CURSO (estado de HOY)
     # ----------------------------------------------------------
     @action(detail=True, methods=['get'], url_path='alumnos')
     def alumnos_del_curso(self, request, pk=None):
@@ -104,7 +105,13 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 status=status.HTTP_200_OK
             )
 
-        subquery = EstadoAlumno.objects.filter(alumno=OuterRef('pk')).order_by('-fecha', '-id')
+        # 🔹 Solo mostrar estados del día actual
+        hoy = date.today()
+        subquery = EstadoAlumno.objects.filter(
+            alumno=OuterRef('pk'),
+            fecha=hoy
+        ).order_by('-fecha', '-id')
+
         alumnos = alumnos.annotate(
             estado_actual=Subquery(subquery.values('estado')[:1]),
             observacion=Subquery(subquery.values('observacion')[:1]),
@@ -134,7 +141,7 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return paginator.get_paginated_response(data)
 
     # ----------------------------------------------------------
-    # NUEVO: ACTUALIZAR HORARIO DEL CURSO
+    # ACTUALIZAR HORARIO DEL CURSO
     # ----------------------------------------------------------
     @action(detail=True, methods=['put'], url_path='actualizar-horario')
     def actualizar_horario(self, request, pk=None):

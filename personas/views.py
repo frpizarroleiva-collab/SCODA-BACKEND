@@ -8,7 +8,6 @@ from auditoria.mixins import AuditoriaMixin
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
-from estados.models import EstadoAlumno, HistorialEstadoAlumno 
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -17,7 +16,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasAPIKey]
 
     # ----------------------------------------------------------
-    # VALIDAR RUN + REGISTRAR RETIRO AUTOMÁTICO
+    # VALIDAR RUN (solo consulta, sin crear retiros)
     # ----------------------------------------------------------
     @action(
         detail=False,
@@ -27,7 +26,6 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     )
     def validar_run(self, request):
         run = request.data.get("run")
-        user = request.user
 
         # ----------------------------------------------------------
         # VALIDACIÓN DE ENTRADA
@@ -52,7 +50,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             serializer = PersonaBasicaSerializer(persona)
 
             # ----------------------------------------------------------
-            # RELACIONES COMO APODERADO
+            # RELACIONES COMO APODERADO O AUTORIZADO
             # ----------------------------------------------------------
             apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
                 persona=persona
@@ -92,56 +90,11 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             ]
 
             # ----------------------------------------------------------
-            # EVALUACIÓN DE ESTADOS
+            # EVALUACIÓN DE ESTADOS (solo información)
             # ----------------------------------------------------------
             es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in apoderados_qs)
             es_autorizado = any(rel.autorizado for rel in apoderados_qs)
             mensaje_autorizado = "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
-
-            # ----------------------------------------------------------
-            # REGISTRO AUTOMÁTICO DE RETIRO
-            # ----------------------------------------------------------
-            if es_apoderado or es_autorizado:
-                for rel in apoderados_qs:
-                    alumno = rel.alumno
-                    curso = alumno.curso
-
-                    # Evitar duplicados
-                    existe = EstadoAlumno.objects.filter(
-                        alumno=alumno,
-                        fecha=date.today(),
-                        estado="RETIRADO"
-                    ).exists()
-
-                    if not existe:
-                        nuevo = EstadoAlumno.objects.create(
-                            alumno=alumno,
-                            curso=curso,
-                            fecha=date.today(),
-                            estado="RETIRADO",
-                            observacion="Validación QR",
-                            retirado_por=persona,
-                            usuario_registro=user
-                        )
-
-                        HistorialEstadoAlumno.objects.create(
-                            estado_alumno=nuevo,
-                            alumno=alumno,
-                            curso=curso,
-                            fecha=date.today(),
-                            estado="RETIRADO",
-                            observacion="Validación QR",
-                            usuario_registro=user,
-                            retirado_por=persona
-                        )
-
-                        # Auditoría automática
-                        self.registrar_auditoria(
-                            request,
-                            "CREAR",
-                            "EstadoAlumno",
-                            f"Retiro automático registrado para el alumno {alumno.persona.nombres} {alumno.persona.apellido_uno}"
-                        )
 
             # ----------------------------------------------------------
             # AUDITORÍA DE CONSULTA EXITOSA
@@ -160,11 +113,11 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "existe": True,
                 "persona": serializer.data,
                 "es_apoderado": es_apoderado,
-                "alumnos_asociados": alumnos_data,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
+                "alumnos_asociados": alumnos_data,
                 "alumnos_autorizados": autorizaciones_data,
-                "mensaje": "Validación exitosa y retiro registrado." if es_apoderado or es_autorizado else "Validación exitosa."
+                "mensaje": "Validación exitosa."
             }, status=status.HTTP_200_OK)
 
         except Persona.DoesNotExist:
