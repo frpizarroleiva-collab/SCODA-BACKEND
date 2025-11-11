@@ -200,23 +200,32 @@
         }
 
         // ======================
-        // CONFIG DE LA API
+        // CONFIGURACIÓN GLOBAL
         // ======================
         const API_BASE_URL = "{{ API_BASE_URL }}";
         const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
         const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
 
-        if (ACCESS_TOKEN && !localStorage.getItem('access_token')) {
-            localStorage.setItem('access_token', ACCESS_TOKEN);
-        }
+        // Guardar variables globales en localStorage
+        if (ACCESS_TOKEN) localStorage.setItem("access_token", ACCESS_TOKEN);
+        if (SCODA_API_KEY) localStorage.setItem("SCODA_API_KEY", SCODA_API_KEY);
+        if (API_BASE_URL) localStorage.setItem("API_BASE_URL", API_BASE_URL);
 
-        const token = localStorage.getItem('access_token');
+        console.log("ACCESS_TOKEN:", localStorage.getItem("access_token"));
+        console.log("SCODA_API_KEY:", localStorage.getItem("SCODA_API_KEY"));
+        console.log("API_BASE_URL:", localStorage.getItem("API_BASE_URL"));
+
+        // ======================
+        // FUNCIONES AUXILIARES
+        // ======================
+        const token = localStorage.getItem("access_token");
+        const apiKey = localStorage.getItem("SCODA_API_KEY");
 
         function getHeaders() {
             return {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : '',
-                'X-API-KEY': SCODA_API_KEY
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : "",
+                "X-API-Key": apiKey || "",
             };
         }
 
@@ -246,10 +255,10 @@
                     resPersonas.json()
                 ]);
 
-                document.getElementById('usuarios-count').textContent = usuarios.length ?? '--';
-                document.getElementById('alumnos-count').textContent = alumnos.length ?? '--';
-                document.getElementById('cursos-count').textContent = cursos.length ?? '--';
-                document.getElementById('personas-count').textContent = personas.length ?? '--';
+                document.getElementById("usuarios-count").textContent = usuarios.length ?? "--";
+                document.getElementById("alumnos-count").textContent = alumnos.length ?? "--";
+                document.getElementById("cursos-count").textContent = cursos.length ?? "--";
+                document.getElementById("personas-count").textContent = personas.length ?? "--";
 
             } catch (error) {
                 console.error("Error al obtener conteos:", error);

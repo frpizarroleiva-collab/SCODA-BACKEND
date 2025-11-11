@@ -69,6 +69,87 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    # ----------------------------------------------------------
+    # CREAR FAMILIA COMPLETA (Apoderado + varios alumnos)
+    # ----------------------------------------------------------
+    @action(detail=False, methods=['post'], url_path='crear-familia')
+    def crear_familia(self, request):
+        from personas.models import Persona
+        from escuela.models import Curso
+
+        apoderado_data = request.data.get('apoderado')
+        alumnos_data = request.data.get('alumnos', [])
+        autorizado = request.data.get('autorizado', True)
+        retira = request.data.get('retira', True)
+        tipo_relacion = request.data.get('tipo_relacion', 'apoderado')
+
+        if not apoderado_data or not alumnos_data:
+            return Response(
+                {"error": "Debes enviar datos del apoderado y al menos un alumno."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        #Crear o recuperar apoderado
+        apoderado, _ = Persona.objects.get_or_create(
+            run=apoderado_data.get('run'),
+            defaults={
+                'nombres': apoderado_data.get('nombres'),
+                'apellido_uno': apoderado_data.get('apellido_uno', ''),
+                'apellido_dos': apoderado_data.get('apellido_dos', ''),
+                'fono': apoderado_data.get('fono', ''),
+                'email': apoderado_data.get('email', ''),
+            }
+        )
+
+        alumnos_creados = []
+
+        for alumno_data in alumnos_data:
+            curso_id = alumno_data.get('curso_id')
+            if not curso_id:
+                continue  # ignora alumnos sin curso
+
+            # Crear persona del alumno
+            persona_alumno = Persona.objects.create(
+                nombres=alumno_data.get('nombres'),
+                apellido_uno=alumno_data.get('apellido_uno', ''),
+                apellido_dos=alumno_data.get('apellido_dos', ''),
+                run=alumno_data.get('run'),
+            )
+
+            # Crear alumno
+            alumno = Alumno.objects.create(
+                persona=persona_alumno,
+                curso_id=curso_id
+            )
+
+            # Crear relación apoderado ↔ alumno
+            PersonaAutorizadaAlumno.objects.create(
+                alumno=alumno,
+                persona=apoderado,
+                tipo_relacion=tipo_relacion,
+                autorizado=autorizado
+            )
+
+            alumnos_creados.append(AlumnoSerializer(alumno).data)
+
+        # Registrar auditoría
+        self.registrar_auditoria(
+            request,
+            'CREAR',
+            'FamiliaCompleta',
+            f"Apoderado {apoderado.nombres} con {len(alumnos_creados)} alumno(s)"
+        )
+
+        return Response({
+            "mensaje": f"Apoderado y {len(alumnos_creados)} alumno(s) creados correctamente.",
+            "apoderado": {
+                "id": apoderado.id,
+                "nombre": f"{apoderado.nombres} {apoderado.apellido_uno}",
+                "run": apoderado.run
+            },
+            "alumnos": alumnos_creados
+        }, status=status.HTTP_201_CREATED)
+
 
 # ----------------------------------------------------------------
 # CRUD DE PERSONAS AUTORIZADAS A RETIRAR ALUMNOS

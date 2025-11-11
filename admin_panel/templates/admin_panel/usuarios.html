@@ -33,6 +33,35 @@
             width: 100%; padding: 8px; margin: 8px 0;
             border: 1px solid #ccc; border-radius: 6px;
         }
+
+        /* Loader */
+        #loader {
+            display:none;
+            position:fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background:rgba(255,255,255,0.8);
+            z-index:9999;
+            justify-content:center;
+            align-items:center;
+            font-size:20px;
+            color:#007BFF;
+            font-weight:bold;
+        }
+        #loader::after {
+            content: '';
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #007BFF;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -94,6 +123,9 @@
             </form>
         </div>
     </div>
+
+    <!-- Loader -->
+    <div id="loader">⏳ Guardando usuario, por favor espera...</div>
 
     <script>
         // =============================
@@ -172,25 +204,40 @@
         }
 
         // =============================
-        // GUARDAR (CREATE/UPDATE)
+        // GUARDAR (CREATE/UPDATE) con loader
         // =============================
         async function guardarUsuario(e) {
             e.preventDefault();
+            const loader = document.getElementById('loader');
+            loader.style.display = 'flex'; // mostrar loader
 
             const emailHidden = document.getElementById('usuarioEmailHidden').value;
+            const email = document.getElementById('email').value.trim();
             const url = emailHidden ? `${API_URL}/${encodeURIComponent(emailHidden)}` : API_URL;
             const method = emailHidden ? 'PUT' : 'POST';
 
-            const usuario = {
-                first_name: document.getElementById('first_name').value || 'SinNombre',
-                last_name: document.getElementById('last_name').value || 'SinApellido',
-                email: document.getElementById('email').value,
-                rol: document.getElementById('rol').value,
-                is_active: document.getElementById('activo').value === 'true',
-                password: document.getElementById('password').value || '12345678'
-            };
-
             try {
+                // Validar duplicado solo al crear
+                if (!emailHidden) {
+                    const checkRes = await fetch(API_URL, { headers: getHeaders() });
+                    const usuarios = await checkRes.json();
+                    const existe = usuarios.some(u => u.email.toLowerCase() === email.toLowerCase());
+                    if (existe) {
+                        alert(`El correo "${email}" ya está registrado.`);
+                        loader.style.display = 'none';
+                        return;
+                    }
+                }
+
+                const usuario = {
+                    first_name: document.getElementById('first_name').value || 'SinNombre',
+                    last_name: document.getElementById('last_name').value || 'SinApellido',
+                    email: email,
+                    rol: document.getElementById('rol').value,
+                    is_active: document.getElementById('activo').value === 'true',
+                    password: document.getElementById('password').value || '12345678'
+                };
+
                 const res = await fetch(url, {
                     method: method,
                     headers: getHeaders(),
@@ -202,14 +249,19 @@
                 if (res.ok) {
                     alert(data.message || 'Usuario guardado correctamente.');
                     cerrarModal();
-                    cargarUsuarios();
+                    await cargarUsuarios();
                 } else {
-                    console.error('Error del backend:', data);
-                    alert(`Error (${res.status}): ${JSON.stringify(data, null, 2)}`);
+                    if (data.email && data.email[0].includes('ya está registrado')) {
+                        alert(`${data.email[0]}`);
+                    } else {
+                        alert(`Error (${res.status}): ${JSON.stringify(data, null, 2)}`);
+                    }
                 }
             } catch (error) {
                 console.error('Error general:', error);
                 alert('No se pudo guardar el usuario. Verifica conexión o API Key.');
+            } finally {
+                loader.style.display = 'none';
             }
         }
 

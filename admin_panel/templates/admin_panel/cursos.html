@@ -103,12 +103,13 @@
         const token = localStorage.getItem('access_token');
 
         function getHeaders() {
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : '',
-                'X-API-KEY': SCODA_API_KEY
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+            'X-API-Key': SCODA_API_KEY   // ← usa esta forma exacta
             };
         }
+
 
         // =============================
         // CARGAR SELECTS
