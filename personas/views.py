@@ -57,10 +57,6 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             ).select_related('alumno__persona', 'alumno__curso')
 
             alumnos = [rel.alumno for rel in apoderados_qs]
-
-            # ----------------------------------------------------------
-            # LISTA DE ALUMNOS ASOCIADOS
-            # ----------------------------------------------------------
             alumnos_data = [
                 {
                     "id_alumno": a.id,
@@ -72,10 +68,6 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 }
                 for a in alumnos
             ]
-
-            # ----------------------------------------------------------
-            # LISTA DETALLADA DE AUTORIZACIONES
-            # ----------------------------------------------------------
             autorizaciones_data = [
                 {
                     "id_relacion": rel.id,
@@ -88,10 +80,6 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 }
                 for rel in apoderados_qs
             ]
-
-            # ----------------------------------------------------------
-            # EVALUACIÓN DE ESTADOS (solo información)
-            # ----------------------------------------------------------
             es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in apoderados_qs)
             es_autorizado = any(rel.autorizado for rel in apoderados_qs)
             mensaje_autorizado = "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
@@ -112,12 +100,13 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             return Response({
                 "existe": True,
                 "persona": serializer.data,
+                "persona_id": persona.id,
                 "es_apoderado": es_apoderado,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
                 "alumnos_asociados": alumnos_data,
                 "alumnos_autorizados": autorizaciones_data,
-                "mensaje": "Validación exitosa."
+                "mensaje": "Validación exitosa. Seleccione al alumno que desea retirar."
             }, status=status.HTTP_200_OK)
 
         except Persona.DoesNotExist:
