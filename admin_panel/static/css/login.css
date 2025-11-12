@@ -1,0 +1,174 @@
+/* ==============================
+   LOGIN - SCODA
+   ============================== */
+
+body {
+    font-family: "Inter", Arial, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.4s ease, color 0.4s ease;
+}
+
+/* Caja principal */
+.login-box {
+    background: #fff;
+    padding: 40px 35px;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    width: 360px;
+    text-align: center;
+    position: relative;
+}
+
+/* Inputs */
+.position-relative {
+    position: relative;
+}
+
+.position-relative input.form-control {
+    padding-right: 2.2rem !important; /* espacio para el ojito */
+}
+
+/* 🔹 Botón mostrar contraseña — centrado perfecto */
+#toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    height: 1.5rem;
+    width: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+#toggle-password:hover {
+    color: #08ad3a;
+    transform: translateY(-50%) scale(1.1);
+}
+
+#toggle-password i {
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+/* Botón de ingreso */
+button[type="submit"] {
+    background: #08ad3a;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #fff;
+    width: 100%;
+    padding: 12px;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+button[type="submit"]:hover {
+    background: #06952f;
+    transform: scale(1.02);
+}
+
+/* Footer */
+footer {
+    margin-top: 25px;
+    font-size: 12px;
+    color: #999;
+}
+
+/* ==============================
+   🌙 MODO OSCURO
+   ============================== */
+body[data-theme="dark"] {
+    background: radial-gradient(circle at top, #1b1b1b, #0e0e0e);
+    color: #e9ecef;
+}
+
+body[data-theme="dark"] .login-box {
+    background: #1f1f1f;
+    color: #e9ecef;
+    box-shadow: 0 6px 18px rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme="dark"] input.form-control {
+    background: #2b2b2b;
+    border: 1px solid #3a3a3a;
+    color: #f1f1f1;
+}
+
+body[data-theme="dark"] input.form-control::placeholder {
+    color: #b3b3b3;
+}
+
+/* Ojito modo oscuro */
+body[data-theme="dark"] #toggle-password {
+    color: #bbb;
+}
+body[data-theme="dark"] #toggle-password:hover {
+    color: #8ef091;
+}
+
+/* Botón modo oscuro */
+body[data-theme="dark"] button[type="submit"] {
+    background: #09c050;
+}
+body[data-theme="dark"] button[type="submit"]:hover {
+    background: #07a346;
+}
+
+/* Footer modo oscuro */
+body[data-theme="dark"] footer {
+    color: #777;
+}
+
+/* 🔧 FIX DEFINITIVO - centrado y tamaño correcto del ojito */
+.position-relative {
+    position: relative;
+}
+
+#toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 0.8rem;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    height: auto;
+    width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 2;
+}
+
+#toggle-password:hover {
+    color: #08ad3a;
+}
+
+#toggle-password i {
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+/* Asegura espacio del input */
+input.form-control {
+    padding-right: 2.2rem !important;
+}

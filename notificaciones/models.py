@@ -5,7 +5,7 @@ from django.utils import timezone
 class Notificacion(models.Model):
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         related_name='notificaciones'
     )
     mensaje = models.TextField()

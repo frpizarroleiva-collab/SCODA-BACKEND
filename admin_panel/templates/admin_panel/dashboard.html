@@ -1,271 +1,125 @@
 <!DOCTYPE html>
 <html lang="es">
+{% load static %}
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Administración | SCODA</title>
-    <style>
-        :root {
-            --verde: #08ad3a;
-            --verde-oscuro: #06952f;
-            --fondo: #f7f9fa;
-            --blanco: #ffffff;
-            --gris-texto: #555;
-            --sombra: rgba(0, 0, 0, 0.08);
-        }
+    <title>Dashboard | SCODA</title>
 
-        body {
-            font-family: "Inter", Arial, sans-serif;
-            background: var(--fondo);
-            margin: 0;
-            color: var(--gris-texto);
-        }
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-        header {
-            background: var(--verde);
-            color: white;
-            padding: 18px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 6px var(--sombra);
-        }
-
-        header h1 {
-            font-size: 20px;
-            margin: 0;
-            font-weight: 600;
-        }
-
-        a.logout {
-            background: #b31a1a;
-            color: white;
-            padding: 8px 14px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background 0.2s ease;
-        }
-
-        a.logout:hover { background: #911313; }
-
-        nav {
-            background: var(--blanco);
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            padding: 15px 0;
-            box-shadow: 0 2px 4px var(--sombra);
-            font-weight: 600;
-        }
-
-        nav a {
-            text-decoration: none;
-            color: var(--verde);
-            transition: color 0.2s ease;
-        }
-
-        nav a:hover { color: var(--verde-oscuro); }
-
-        main {
-            padding: 40px 20px;
-            max-width: 1100px;
-            margin: auto;
-        }
-
-        h2 {
-            color: var(--verde-oscuro);
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        p.subtitle {
-            margin-bottom: 25px;
-            color: #666;
-            font-size: 15px;
-        }
-
-        .success-msg {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 12px 18px;
-            margin-bottom: 25px;
-            font-size: 15px;
-            display: none;
-            box-shadow: 0 2px 6px var(--sombra);
-            animation: fadeOut 1s ease-in-out 4s forwards;
-        }
-
-        @keyframes fadeOut {
-            to { opacity: 0; visibility: hidden; }
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 25px;
-        }
-
-        .card {
-            background: var(--blanco);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--sombra);
-            padding: 25px;
-            text-align: center;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 12px var(--sombra);
-        }
-
-        .card h3 {
-            color: var(--verde-oscuro);
-            margin: 0;
-            font-size: 20px;
-        }
-
-        .card p {
-            margin-top: 8px;
-            color: #333;
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        footer {
-            text-align: center;
-            font-size: 13px;
-            color: #888;
-            padding: 20px;
-            margin-top: 40px;
-        }
-    </style>
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <h1>Bienvenido, {{ user.first_name }} {{ user.last_name }}</h1>
-        <a href="{% url 'logout' %}" class="logout">Cerrar sesión</a>
-    </header>
 
-    <!-- Nav -->
-    <nav>
-        <a href="{% url 'usuarios' %}">Usuarios</a>
-        <a href="{% url 'alumnos' %}">Alumnos</a>
-        <a href="{% url 'cursos' %}">Cursos</a>
-        <a href="{% url 'personas' %}">Personas</a>
-    </nav>
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm fixed-top">
+        <div class="container-fluid">
+            <span class="navbar-brand fw-bold">SCODA</span>
+            <div class="ms-auto d-flex align-items-center">
+                <!-- Botón modo oscuro -->
+                <button id="toggle-theme" class="btn btn-outline-light btn-sm me-2" title="Cambiar tema">
+                    <i class="bi bi-moon-fill"></i>
+                </button>
 
-    <!-- Main -->
-    <main>
-        <div id="status-message" class="success-msg">Inicio de sesión exitoso.</div>
+                <!-- Usuario -->
+                <span class="text-white me-3 fw-semibold">
+                    Bienvenido, {{ user.first_name }} {{ user.last_name }}
+                </span>
 
-        <h2>Panel de administración</h2>
-        <p class="subtitle">Gestiona usuarios, alumnos, cursos y personas del sistema SCODA.</p>
-
-        <!-- Tarjetas -->
-        <div class="cards">
-            <div class="card">
-                <h3>Usuarios</h3>
-                <p id="usuarios-count">--</p>
-            </div>
-
-            <div class="card">
-                <h3>Alumnos</h3>
-                <p id="alumnos-count">--</p>
-            </div>
-
-            <div class="card">
-                <h3>Cursos</h3>
-                <p id="cursos-count">--</p>
-            </div>
-
-            <div class="card">
-                <h3>Personas</h3>
-                <p id="personas-count">--</p>
+                <!-- Logout -->
+                <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">Cerrar sesión</a>
             </div>
         </div>
-    </main>
+    </nav>
 
-    <footer>© 2025 SCODA — Sistema de Control de Autorización de Salidas</footer>
+    <!-- CONTENEDOR GENERAL -->
+    <div class="d-flex" id="wrapper">
+        <!-- SIDEBAR -->
+        <div id="sidebar" class="bg-white border-end shadow-sm pt-4">
+            <ul class="nav flex-column px-3">
+                <li class="nav-item mb-2">
+                    <a href="{% url 'usuarios' %}" class="nav-link text-success fw-semibold">
+                        <i class="bi bi-people me-2"></i>Usuarios
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'alumnos' %}" class="nav-link text-success fw-semibold">
+                        <i class="bi bi-mortarboard me-2"></i>Alumnos
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'cursos' %}" class="nav-link text-success fw-semibold">
+                        <i class="bi bi-journal me-2"></i>Cursos
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'personas' %}" class="nav-link text-success fw-semibold">
+                        <i class="bi bi-person-badge me-2"></i>Personas
+                    </a>
+                </li>
+            </ul>
+        </div>
 
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="p-4 flex-grow-1 mt-5" id="content">
+            <div class="container-fluid">
+                <div id="status-message" class="alert alert-success text-center d-none" role="alert">
+                    Inicio de sesión exitoso.
+                </div>
+
+                <h2 class="text-success fw-bold mb-3">Panel de administración</h2>
+                <p class="text-muted mb-4">Gestiona usuarios, alumnos, cursos y personas del sistema SCODA.</p>
+
+                <!-- TARJETAS -->
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="card shadow-sm border-0 p-3 text-center">
+                            <i class="bi bi-people display-5 text-success mb-2"></i>
+                            <h5 class="text-success">Usuarios</h5>
+                            <p class="fs-3 fw-bold mb-0" id="usuarios-count">--</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow-sm border-0 p-3 text-center">
+                            <i class="bi bi-mortarboard display-5 text-success mb-2"></i>
+                            <h5 class="text-success">Alumnos</h5>
+                            <p class="fs-3 fw-bold mb-0" id="alumnos-count">--</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow-sm border-0 p-3 text-center">
+                            <i class="bi bi-journal display-5 text-success mb-2"></i>
+                            <h5 class="text-success">Cursos</h5>
+                            <p class="fs-3 fw-bold mb-0" id="cursos-count">--</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow-sm border-0 p-3 text-center">
+                            <i class="bi bi-person-badge display-5 text-success mb-2"></i>
+                            <h5 class="text-success">Personas</h5>
+                            <p class="fs-3 fw-bold mb-0" id="personas-count">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+   {% include "admin_panel/includes/footer.html" %}
+
+
+    <!-- CONFIGURACIÓN GLOBAL -->
     <script>
-        // Mostrar mensaje de éxito
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('status') === 'success') {
-            document.getElementById('status-message').style.display = 'block';
-        }
-
-        // ======================
-        // CONFIGURACIÓN GLOBAL
-        // ======================
-        const API_BASE_URL = "{{ API_BASE_URL }}";
-        const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
-        const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
-
-        // Guardar variables globales en localStorage
-        if (ACCESS_TOKEN) localStorage.setItem("access_token", ACCESS_TOKEN);
-        if (SCODA_API_KEY) localStorage.setItem("SCODA_API_KEY", SCODA_API_KEY);
-        if (API_BASE_URL) localStorage.setItem("API_BASE_URL", API_BASE_URL);
-
-        console.log("ACCESS_TOKEN:", localStorage.getItem("access_token"));
-        console.log("SCODA_API_KEY:", localStorage.getItem("SCODA_API_KEY"));
-        console.log("API_BASE_URL:", localStorage.getItem("API_BASE_URL"));
-
-        // ======================
-        // FUNCIONES AUXILIARES
-        // ======================
-        const token = localStorage.getItem("access_token");
-        const apiKey = localStorage.getItem("SCODA_API_KEY");
-
-        function getHeaders() {
-            return {
-                "Content-Type": "application/json",
-                "Authorization": token ? `Bearer ${token}` : "",
-                "X-API-Key": apiKey || "",
-            };
-        }
-
-        // ======================
-        // CARGAR CONTEOS
-        // ======================
-        async function cargarConteos() {
-            try {
-                const endpoints = {
-                    usuarios: `${API_BASE_URL}/api/usuarios`,
-                    alumnos: `${API_BASE_URL}/api/alumnos`,
-                    cursos: `${API_BASE_URL}/api/cursos`,
-                    personas: `${API_BASE_URL}/api/personas`,
-                };
-
-                const [resUsuarios, resAlumnos, resCursos, resPersonas] = await Promise.all([
-                    fetch(endpoints.usuarios, { headers: getHeaders() }),
-                    fetch(endpoints.alumnos, { headers: getHeaders() }),
-                    fetch(endpoints.cursos, { headers: getHeaders() }),
-                    fetch(endpoints.personas, { headers: getHeaders() })
-                ]);
-
-                const [usuarios, alumnos, cursos, personas] = await Promise.all([
-                    resUsuarios.json(),
-                    resAlumnos.json(),
-                    resCursos.json(),
-                    resPersonas.json()
-                ]);
-
-                document.getElementById("usuarios-count").textContent = usuarios.length ?? "--";
-                document.getElementById("alumnos-count").textContent = alumnos.length ?? "--";
-                document.getElementById("cursos-count").textContent = cursos.length ?? "--";
-                document.getElementById("personas-count").textContent = personas.length ?? "--";
-
-            } catch (error) {
-                console.error("Error al obtener conteos:", error);
-            }
-        }
-
-        cargarConteos();
+        window.SCODA_CONFIG = {
+            API_BASE_URL: "{{ API_BASE_URL }}",
+            SCODA_API_KEY: "{{ SCODA_API_KEY }}",
+            ACCESS_TOKEN: "{{ ACCESS_TOKEN }}"
+        };
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/dashboard.js' %}"></script>
 </body>
 </html>
