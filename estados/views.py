@@ -237,6 +237,9 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     # ----------------------------------------------------------
     # LISTADOS: AUSENTES / RETIROS / EXTENSIÓN / RETIROS ANTICIPADOS
     # ----------------------------------------------------------
+       # ----------------------------------------------------------
+    # LISTAR AUSENTES (mantiene estructura, solo agrega foto)
+    # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='ausentes')
     def listar_ausentes(self, request):
         user = request.user
@@ -255,15 +258,40 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if curso_id:
             filtros['curso_id'] = curso_id
 
-        queryset = EstadoAlumno.objects.select_related('alumno__persona', 'curso').filter(**filtros)
-        data = EstadoAlumnoSerializer(queryset, many=True).data
+        queryset = EstadoAlumno.objects.select_related(
+            'alumno__persona', 'curso__establecimiento', 'usuario_registro'
+        ).filter(**filtros)
+
+        alumnos_data = []
+        for estado in queryset:
+            alumno = estado.alumno
+            persona = alumno.persona
+            curso = alumno.curso
+            establecimiento = curso.establecimiento if curso else None
+            usuario_registro = estado.usuario_registro
+
+            alumnos_data.append({
+                "id": estado.id,
+                "alumno": alumno.id,
+                "alumno_nombre": f"{persona.nombres} {persona.apellido_uno} {persona.apellido_dos or ''}".strip(),
+                "curso_id": curso.id if curso else None,
+                "curso_nombre": curso.nombre if curso else None,
+                "establecimiento": establecimiento.nombre if establecimiento else None,
+                "fecha": estado.fecha,
+                "estado": estado.estado,
+                "hora_registro": estado.hora_registro,
+                "observacion": estado.observacion,
+                "foto_documento": estado.foto_documento if getattr(estado, 'foto_documento', None) else None,
+                "quien_registro": usuario_registro.email if usuario_registro else None
+            })
 
         return Response({
             "fecha": str(fecha),
             "curso_id": curso_id,
-            "total_ausentes": len(data),
-            "alumnos": data
+            "total_ausentes": len(alumnos_data),
+            "alumnos": alumnos_data
         }, status=status.HTTP_200_OK)
+
 
     # ----------------------------------------------------------
     # LISTAR RETIROS
@@ -329,7 +357,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='retiros-anticipados')
     def listar_retiros_anticipados(self, request):
-        """Lista todos los retiros anticipados (manuales o QR)."""
         from alumnos.models import PersonaAutorizadaAlumno
 
         user = request.user

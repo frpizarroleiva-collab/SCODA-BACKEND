@@ -23,10 +23,6 @@ class EstadoAlumnoSerializer(serializers.ModelSerializer):
         read_only_fields = ['hora_registro', 'usuario_registro', 'fecha']
 
     def get_alumno_nombre(self, obj):
-        """
-        Retorna el nombre completo del alumno (nombres + apellidos).
-        Se usa en todos los listados: ausentes, retiros y extensión.
-        """
         persona = getattr(obj.alumno, 'persona', None)
         if not persona:
             return None
