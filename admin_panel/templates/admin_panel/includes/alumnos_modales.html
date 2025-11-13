@@ -1,58 +1,176 @@
 <!-- ===========================================================
-     MODALES DE ALUMNOS
+     MODALES DE ALUMNOS – SCODA (VERSIÓN MEJORADA)
 =========================================================== -->
 
-<!--Modal Crear Familia -->
-<div id="modalForm" class="modal">
+<!-- ===========================================================
+     MODAL CREAR FAMILIA (APODERADO + HIJOS + APODERADOS EXTRA)
+=========================================================== -->
+<div class="modal fade" id="modalForm" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
-        <h3>Registrar Apoderado y sus Alumnos</h3>
+
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-people-fill me-2"></i> Registrar Familia (Apoderados + Hijos)
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
         <form id="formFamilia">
-            <h4>Datos del Apoderado</h4>
-            <input type="text" name="nombres_apoderado" placeholder="Nombres" required>
-            <input type="text" name="apellido_uno_apoderado" placeholder="Apellido paterno" required>
-            <input type="text" name="apellido_dos_apoderado" placeholder="Apellido materno">
-            <input type="text" name="run_apoderado" placeholder="RUN" required>
-            <input type="email" name="email_apoderado" placeholder="Correo electrónico">
-            <input type="text" name="fono_apoderado" placeholder="Teléfono">
 
-            <label><input type="checkbox" name="autorizado" checked> Autorizado</label>
+          <!-- ===========================================================
+               APODERADO PRINCIPAL
+          ============================================================ -->
+          <h5 class="fw-bold text-success mb-3">Apoderado Principal</h5>
 
-            <hr>
-            <h4>Hijos</h4>
-            <div id="contenedorHijos"></div>
-            <button type="button" id="btnAgregarHijo" class="btn btn-success btn-sm mb-2">
-                <i class="bi bi-plus-circle"></i> Agregar hijo
-            </button>
-
-            <div class="text-end">
-                <button type="submit" class="btn btn-success">Guardar familia</button>
-                <button type="button" class="btn btn-secondary" id="cerrarModal">Cerrar</button>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <input type="text" name="nombres_apoderado" class="form-control" placeholder="Nombres" required>
             </div>
+
+            <div class="col-md-4">
+              <input type="text" name="apellido_uno_apoderado" class="form-control" placeholder="Apellido paterno" required>
+            </div>
+
+            <div class="col-md-4">
+              <input type="text" name="apellido_dos_apoderado" class="form-control" placeholder="Apellido materno">
+            </div>
+
+            <div class="col-md-4">
+              <input type="text" name="run_apoderado" class="form-control" placeholder="RUN" required>
+            </div>
+
+            <div class="col-md-4">
+              <input type="email" name="email_apoderado" class="form-control" placeholder="Correo electrónico">
+            </div>
+
+            <div class="col-md-4">
+              <input type="text" name="fono_apoderado" class="form-control" placeholder="Teléfono">
+            </div>
+
+            <div class="col-md-6">
+              <label class="fw-semibold">Parentesco</label>
+              <select name="parentesco_apoderado" class="form-select" required>
+                <option value="Apoderado">Apoderado (principal)</option>
+                <option value="Padre">Padre</option>
+                <option value="Madre">Madre</option>
+                <option value="Abuelo">Abuelo</option>
+                <option value="Abuela">Abuela</option>
+                <option value="Tío">Tío</option>
+                <option value="Tía">Tía</option>
+                <option value="Hermano">Hermano</option>
+                <option value="Hermana">Hermana</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+
+            <div class="col-md-6 d-flex align-items-end">
+              <label class="fw-semibold ms-2">
+                <input type="checkbox" name="autorizado" checked> Autorizado para retiro
+              </label>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- ===========================================================
+               APODERADOS ADICIONALES
+          ============================================================ -->
+          <h5 class="fw-bold text-success mb-3">Apoderados Adicionales (Máximo 2)</h5>
+
+          <div id="contenedorApoderadosExtra"></div>
+
+          <button type="button" id="btnAgregarApoderadoExtra" class="btn btn-outline-success btn-sm mt-2">
+            <i class="bi bi-person-plus"></i> Agregar apoderado
+          </button>
+
+          <hr class="mt-4">
+
+          <!-- ===========================================================
+               HIJOS
+          ============================================================ -->
+          <h5 class="fw-bold text-success">Hijos</h5>
+
+          <div id="contenedorHijos"></div>
+
+          <button type="button" id="btnAgregarHijo" class="btn btn-outline-success btn-sm mt-2 mb-3">
+            <i class="bi bi-plus-circle"></i> Agregar hijo
+          </button>
+
         </form>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button form="formFamilia" class="btn btn-success">Guardar familia</button>
+      </div>
+
     </div>
+  </div>
 </div>
 
-<!--Modal Editar Alumno -->
-<div id="modalEditar" class="modal">
+<!-- ===========================================================
+     MODAL EDITAR ALUMNO
+=========================================================== -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md modal-dialog-centered">
     <div class="modal-content">
-        <h3>Editar Alumno</h3>
-        <form id="formEditar">
-            <input type="hidden" name="id">
-            <label>Nombres</label>
-            <input type="text" name="nombres" required>
-            <label>Apellido Paterno</label>
-            <input type="text" name="apellido_uno" required>
-            <label>Apellido Materno</label>
-            <input type="text" name="apellido_dos">
-            <label>RUN</label>
-            <input type="text" name="run" required>
-            <label>Curso</label>
-            <select name="curso_id" required></select>
 
-            <div class="text-end">
-                <button type="submit" class="btn btn-success">Guardar cambios</button>
-                <button type="button" class="btn btn-secondary" id="cerrarEditar">Cerrar</button>
-            </div>
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-pencil-square me-2"></i> Editar Alumno
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <form id="formEditar">
+
+          <input type="hidden" name="id">
+
+          <div class="mb-2">
+            <label class="fw-semibold">Nombres</label>
+            <input type="text" name="nombres" class="form-control" required>
+          </div>
+
+          <div class="mb-2">
+            <label class="fw-semibold">Apellido Paterno</label>
+            <input type="text" name="apellido_uno" class="form-control" required>
+          </div>
+
+          <div class="mb-2">
+            <label class="fw-semibold">Apellido Materno</label>
+            <input type="text" name="apellido_dos" class="form-control">
+          </div>
+
+          <div class="mb-2">
+            <label class="fw-semibold">RUN</label>
+            <input type="text" name="run" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="fw-semibold">Curso</label>
+            <select name="curso_id" class="form-select" required></select>
+          </div>
+
         </form>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button form="formEditar" class="btn btn-success">Guardar cambios</button>
+      </div>
+
     </div>
+  </div>
 </div>
+
+<!-- ===========================================================
+     MODAL DETALLE ALUMNO (NO CAMBIAR)
+=========================================================== -->
+{% include "admin_panel/includes/alumnos_detalle_modal.html" %}

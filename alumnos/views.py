@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -13,169 +14,198 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     serializer_class = AlumnoSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
 
-    # ----------------------------------------------------------
-    # DETALLE COMPLETO DE ALUMNO (Apoderados + Autorizados)
-    # ----------------------------------------------------------
+    # ============================================================
+    # DETALLE DE ALUMNO
+    # ============================================================
     @action(detail=True, methods=['get'], url_path='detalle')
     def detalle_alumno(self, request, pk=None):
+
         try:
             alumno = Alumno.objects.select_related(
                 'persona', 'curso__establecimiento'
             ).get(pk=pk)
         except Alumno.DoesNotExist:
-            return Response(
-                {"error": "El alumno no existe."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "El alumno no existe."}, status=404)
 
-        # 🔹 Apoderados vinculados
         apoderados = PersonaAutorizadaAlumno.objects.select_related('persona').filter(
-            alumno_id=alumno.id, tipo_relacion__iexact='apoderado'
+            alumno_id=alumno.id,
+            tipo_relacion='apoderado'
         )
 
-        data_apoderados = [
-            {
-                "id": a.persona.id,
-                "nombre": f"{a.persona.nombres} {a.persona.apellido_uno or ''} {a.persona.apellido_dos or ''}".strip(),
-                "run": a.persona.run,
-                "telefono": a.persona.fono or "",
-                "correo": a.persona.email or "",
-                "autorizado": a.autorizado,
-                "tipo_relacion": a.tipo_relacion
-            }
-            for a in apoderados
-        ]
+        data_apoderados = [{
+            "id": a.persona.id,
+            "nombre": f"{a.persona.nombres} {a.persona.apellido_uno or ''} {a.persona.apellido_dos or ''}".strip(),
+            "run": a.persona.run,
+            "telefono": a.persona.fono or "",
+            "correo": a.persona.email or "",
+            "autorizado": a.autorizado,
+            "tipo_relacion": a.tipo_relacion,
+            "parentesco": a.parentesco
+        } for a in apoderados]
 
-        # 🔹 Personas autorizadas (no apoderados)
         autorizados = PersonaAutorizadaAlumno.objects.select_related('persona').filter(
             alumno_id=alumno.id,
             autorizado=True
-        ).exclude(tipo_relacion__iexact='apoderado')
+        )
 
-        data_autorizados = [
-            {
-                "id": a.persona.id,
-                "nombre": f"{a.persona.nombres} {a.persona.apellido_uno or ''} {a.persona.apellido_dos or ''}".strip(),
-                "tipo_relacion": a.tipo_relacion,
-                "telefono": a.persona.fono or "",
-                "correo": a.persona.email or "",
-                "autorizado": a.autorizado
-            }
-            for a in autorizados
-        ]
+        data_autorizados = [{
+            "id": a.persona.id,
+            "nombre": f"{a.persona.nombres} {a.persona.apellido_uno or ''} {a.persona.apellido_dos or ''}".strip(),
+            "tipo_relacion": a.tipo_relacion,
+            "parentesco": a.parentesco,
+            "telefono": a.persona.fono or "",
+            "correo": a.persona.email or "",
+            "autorizado": a.autorizado
+        } for a in autorizados]
 
-        # 🔹 Datos principales del alumno
         data_alumno = {
             "id": alumno.id,
             "run": alumno.persona.run,
             "nombre": alumno.persona.nombres,
             "apellido": f"{alumno.persona.apellido_uno or ''} {alumno.persona.apellido_dos or ''}".strip(),
             "curso": alumno.curso.nombre if alumno.curso else None,
-            "establecimiento": (
-                alumno.curso.establecimiento.nombre
-                if alumno.curso and alumno.curso.establecimiento
-                else None
-            ),
+            "establecimiento": alumno.curso.establecimiento.nombre
+            if alumno.curso and alumno.curso.establecimiento else None
         }
 
-        # 🔹 Respuesta final (compatible con el front actual)
-        data_response = {
+        return Response({
             "alumno": data_alumno,
             "apoderados": data_apoderados,
             "autorizados": data_autorizados,
             "total_apoderados": len(data_apoderados),
-            "total_autorizados": len(data_autorizados),
-            # compatibilidad con versiones anteriores del front
-            "contactos_autorizados": data_autorizados
-        }
+            "total_autorizados": len(data_autorizados)
+        })
 
-        return Response(data_response, status=status.HTTP_200_OK)
-
-    # ----------------------------------------------------------
-    # CREAR FAMILIA COMPLETA (Apoderado + varios alumnos)
-    # ----------------------------------------------------------
+    # ============================================================
+    # CREAR FAMILIA COMPLETA — APODERADO + EXTRA + HIJOS
+    # ============================================================
     @action(detail=False, methods=['post'], url_path='crear-familia')
     def crear_familia(self, request):
         from personas.models import Persona
-        from escuela.models import Curso
+        from personas.models import Persona as PersonaModel
 
-        apoderado_data = request.data.get('apoderado')
+        # === RESPECTO A TU FRONTEND ===
+        apoderado_data = request.data.get('apoderado_principal')
+        apoderados_extras = request.data.get('apoderados_extras', [])
         alumnos_data = request.data.get('alumnos', [])
-        autorizado = request.data.get('autorizado', True)
-        retira = request.data.get('retira', True)
-        tipo_relacion = request.data.get('tipo_relacion', 'apoderado')
 
+        # VALIDACIÓN
         if not apoderado_data or not alumnos_data:
-            return Response(
-                {"error": "Debes enviar datos del apoderado y al menos un alumno."},
-                status=status.HTTP_400_BAD_REQUEST
+            return Response({"error": "Faltan datos para registrar la familia."}, status=400)
+
+        # ============================================================
+        # APODERADO PRINCIPAL
+        # ============================================================
+        try:
+            apoderado_ppal, _ = Persona.objects.get_or_create(
+                run=apoderado_data.get('run'),
+                defaults={
+                    'nombres': apoderado_data.get('nombres'),
+                    'apellido_uno': apoderado_data.get('apellido_uno', ''),
+                    'apellido_dos': apoderado_data.get('apellido_dos', ''),
+                    'fono': apoderado_data.get('fono', ''),
+                    'email': apoderado_data.get('email', ''),
+                }
             )
+        except IntegrityError:
+            return Response({"error": "El RUN del apoderado ya está registrado."}, status=400)
 
-        # Crear o recuperar apoderado
-        apoderado, _ = Persona.objects.get_or_create(
-            run=apoderado_data.get('run'),
-            defaults={
-                'nombres': apoderado_data.get('nombres'),
-                'apellido_uno': apoderado_data.get('apellido_uno', ''),
-                'apellido_dos': apoderado_data.get('apellido_dos', ''),
-                'fono': apoderado_data.get('fono', ''),
-                'email': apoderado_data.get('email', ''),
-            }
-        )
+        # No permitir que un alumno sea apoderado
+        if hasattr(apoderado_ppal, "alumno"):
+            return Response({"error": "Esta persona es un ALUMNO y no puede ser apoderado."}, status=400)
 
+        # ============================================================
+        # CREAR ALUMNOS
+        # ============================================================
         alumnos_creados = []
 
         for alumno_data in alumnos_data:
+
             curso_id = alumno_data.get('curso_id')
             if not curso_id:
-                continue  # ignora alumnos sin curso
+                continue
 
-            # Crear persona del alumno
-            persona_alumno = Persona.objects.create(
-                nombres=alumno_data.get('nombres'),
-                apellido_uno=alumno_data.get('apellido_uno', ''),
-                apellido_dos=alumno_data.get('apellido_dos', ''),
-                run=alumno_data.get('run'),
-            )
+            try:
+                persona_alumno = PersonaModel.objects.create(
+                    nombres=alumno_data.get('nombres'),
+                    apellido_uno=alumno_data.get('apellido_uno', ''),
+                    apellido_dos=alumno_data.get('apellido_dos', ''),
+                    run=alumno_data.get('run'),
+                )
+            except IntegrityError:
+                return Response({"error": f"El RUN {alumno_data.get('run')} ya existe."}, status=400)
 
-            # Crear alumno
             alumno = Alumno.objects.create(
                 persona=persona_alumno,
                 curso_id=curso_id
             )
 
-            # Crear relación apoderado ↔ alumno
+            # Apoderado principal con su propio valor autorizado
             PersonaAutorizadaAlumno.objects.create(
                 alumno=alumno,
-                persona=apoderado,
-                tipo_relacion=tipo_relacion,
-                autorizado=autorizado
+                persona=apoderado_ppal,
+                tipo_relacion="apoderado",
+                parentesco=apoderado_data.get("parentesco", "Apoderado"),
+                autorizado=apoderado_data.get("autorizado", True)
             )
 
-            alumnos_creados.append(AlumnoSerializer(alumno).data)
+            alumnos_creados.append(alumno)
 
-        # Registrar auditoría
+        # ============================================================
+        # APODERADOS EXTRA (máx 2, pero máximo 3 por alumno)
+        # ============================================================
+        for ap_data in apoderados_extras:
+
+            try:
+                persona_extra, _ = Persona.objects.get_or_create(
+                    run=ap_data.get('run'),
+                    defaults={
+                        'nombres': ap_data.get('nombres'),
+                        'apellido_uno': ap_data.get('apellido_uno', ''),
+                        'apellido_dos': ap_data.get('apellido_dos', ''),
+                        'fono': ap_data.get('fono', ''),
+                        'email': ap_data.get('email', ''),
+                    }
+                )
+            except IntegrityError:
+                return Response({"error": f"El RUN {ap_data.get('run')} ya existe."}, status=400)
+
+            if hasattr(persona_extra, "alumno"):
+                return Response({"error": f"{persona_extra.run} es un ALUMNO y no puede ser apoderado."}, status=400)
+
+            parentesco = ap_data.get("parentesco", "Autorizado")
+            autorizado = ap_data.get("autorizado", True)
+
+            for alumno in alumnos_creados:
+
+                if PersonaAutorizadaAlumno.objects.filter(alumno=alumno).count() >= 3:
+                    return Response({"error": "Un alumno no puede tener más de 3 personas autorizadas."}, status=400)
+
+                PersonaAutorizadaAlumno.objects.create(
+                    alumno=alumno,
+                    persona=persona_extra,
+                    tipo_relacion="autorizado",
+                    parentesco=parentesco,
+                    autorizado=autorizado
+                )
+
+        # Auditoría
         self.registrar_auditoria(
             request,
             'CREAR',
             'FamiliaCompleta',
-            f"Apoderado {apoderado.nombres} con {len(alumnos_creados)} alumno(s)"
+            f"Apoderado principal con {len(alumnos_creados)} alumno(s) y apoderados extra."
         )
 
         return Response({
-            "mensaje": f"Apoderado y {len(alumnos_creados)} alumno(s) creados correctamente.",
-            "apoderado": {
-                "id": apoderado.id,
-                "nombre": f"{apoderado.nombres} {apoderado.apellido_uno}",
-                "run": apoderado.run
-            },
-            "alumnos": alumnos_creados
-        }, status=status.HTTP_201_CREATED)
+            "mensaje": "Familia creada correctamente.",
+            "alumnos": [AlumnoSerializer(a).data for a in alumnos_creados]
+        }, status=201)
 
 
-# ----------------------------------------------------------------
-# CRUD DE PERSONAS AUTORIZADAS A RETIRAR ALUMNOS
-# ----------------------------------------------------------------
+# ============================================================
+# CRUD PERSONAS AUTORIZADAS
+# ============================================================
 class PersonaAutorizadaAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = PersonaAutorizadaAlumno.objects.select_related('alumno__persona', 'persona')
     permission_classes = [IsAuthenticated, HasAPIKey]
@@ -183,63 +213,41 @@ class PersonaAutorizadaAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         alumno_id = request.data.get("alumno")
         persona_id = request.data.get("persona")
-        tipo_relacion = request.data.get("tipo_relacion")
+        parentesco = request.data.get("parentesco", "Autorizado")
         autorizado = request.data.get("autorizado", True)
 
-        # Validaciones básicas
-        if not alumno_id or not persona_id or not tipo_relacion:
-            return Response(
-                {"error": "Debes enviar 'alumno', 'persona' y 'tipo_relacion'."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Máximo 3 autorizados
+        if PersonaAutorizadaAlumno.objects.filter(alumno_id=alumno_id).count() >= 3:
+            return Response({"error": "Máximo 3 autorizados."}, status=400)
 
-        # Evita duplicados
-        if PersonaAutorizadaAlumno.objects.filter(alumno_id=alumno_id, persona_id=persona_id).exists():
-            return Response(
-                {"error": "Esta persona ya está registrada como autorizada para este alumno."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Duplicado
+        if PersonaAutorizadaAlumno.objects.filter(
+                alumno_id=alumno_id,
+                persona_id=persona_id
+        ).exists():
+            return Response({"error": "Esta persona ya está asociada."}, status=400)
 
-        # Crear registro
+        # Persona no puede ser alumno
+        if Alumno.objects.filter(persona_id=persona_id).exists():
+            return Response({"error": "Un alumno no puede ser apoderado."}, status=400)
+
+        tipo_relacion = "apoderado" if parentesco == "Apoderado" else "autorizado"
+
         persona_aut = PersonaAutorizadaAlumno.objects.create(
             alumno_id=alumno_id,
             persona_id=persona_id,
             tipo_relacion=tipo_relacion,
+            parentesco=parentesco,
             autorizado=autorizado
         )
 
-        # Registrar auditoría
-        self.registrar_auditoria(
-            request,
-            'CREAR',
-            'PersonaAutorizadaAlumno',
-            f"Se creó relación alumno {alumno_id} con persona {persona_id}"
-        )
-
         return Response({
-            "mensaje": "Persona asociada correctamente como autorizada.",
+            "mensaje": "Persona asociada correctamente.",
             "data": {
                 "alumno": persona_aut.alumno.persona.nombres,
                 "persona": persona_aut.persona.nombres,
+                "parentesco": persona_aut.parentesco,
                 "tipo_relacion": persona_aut.tipo_relacion,
                 "autorizado": persona_aut.autorizado
             }
-        }, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        alumno_nombre = instance.alumno.persona.nombres
-        persona_nombre = instance.persona.nombres
-        self.perform_destroy(instance)
-
-        self.registrar_auditoria(
-            request,
-            'ELIMINAR',
-            'PersonaAutorizadaAlumno',
-            f"Se eliminó la autorización de {persona_nombre} para el alumno {alumno_nombre}"
-        )
-
-        return Response(
-            {"mensaje": f"Autorización eliminada correctamente ({persona_nombre} - {alumno_nombre})."},
-            status=status.HTTP_200_OK
-        )
+        })

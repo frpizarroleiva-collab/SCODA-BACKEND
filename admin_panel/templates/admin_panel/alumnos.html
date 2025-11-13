@@ -12,21 +12,11 @@
     <!-- Estilos SCODA -->
     <link rel="stylesheet" href="{% static 'css/usuarios.css' %}">
     <link rel="stylesheet" href="{% static 'css/alumnos.css' %}">
-
-    <style>
-        /* Ajuste para mantener coherencia con el panel */
-        header.bg-success h4,
-        header.bg-success .fw-bold {
-            color: #fff !important;
-        }
-        main {
-            min-height: calc(100vh - 120px);
-        }
-    </style>
 </head>
-<body data-theme="light">
 
-    <!-- ✅ Encabezado -->
+<body class="d-flex flex-column min-vh-100" data-theme="light">
+
+    <!-- Encabezado -->
     <header class="bg-success text-white d-flex justify-content-between align-items-center px-4 py-3 shadow-sm">
         <h4 class="m-0 fw-bold">
             <i class="bi bi-mortarboard me-2"></i> Gestión de Alumnos
@@ -36,8 +26,9 @@
         </button>
     </header>
 
-    <!-- ✅ Contenido principal -->
-    <main class="container py-4">
+    <!-- Contenido principal -->
+    <main class="container py-4 flex-grow-1">
+
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="text-success fw-bold mb-0">
                 <i class="bi bi-people-fill me-2"></i> Listado de Alumnos
@@ -47,12 +38,11 @@
             </button>
         </div>
 
-        <!-- ✅ Tabla -->
         <div class="table-responsive shadow-sm">
             <table class="table table-hover align-middle" id="tablaAlumnos">
                 <thead class="table-success text-center">
                     <tr>
-                        <th>ID</th>
+                        <th>#</th> <!-- índice dinámico -->
                         <th>RUN</th>
                         <th>Nombre</th>
                         <th>Curso</th>
@@ -60,38 +50,47 @@
                     </tr>
                 </thead>
                 <tbody class="text-center">
-                    <!-- Contenido dinámico generado por JS -->
+                    <!-- contenido dinámico -->
                 </tbody>
             </table>
         </div>
 
-        <!-- ✅ Modales -->
-        {% include "admin_panel/includes/alumnos_modales.html" %}
-        {% include "admin_panel/includes/alumnos_detalle_modal.html" %}
     </main>
 
-    <!-- ✅ Footer -->
+    <!-- Modales fuera de <main> para evitar bugs -->
+    {% include "admin_panel/includes/alumnos_modales.html" %}
+    {% include "admin_panel/includes/alumnos_detalle_modal.html" %}
+
+    <!-- Footer -->
     {% include "admin_panel/includes/footer.html" %}
 
-    <!-- ✅ Loader y notificación -->
+    <!-- Notificación flotante -->
     <div id="notificacion"></div>
+
+    <!-- Loader global -->
     <div id="loader">
         <div class="spinner-border text-success" role="status"></div>
         Cargando...
     </div>
 
-    <!-- Bootstrap y JS -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SCODA CONFIG -->
     <script>
         window.SCODA_CONFIG = {
             API_BASE_URL: "{{ API_BASE_URL }}",
             SCODA_API_KEY: "{{ SCODA_API_KEY }}",
             ACCESS_TOKEN: "{{ ACCESS_TOKEN }}"
         };
+
         function volverDashboard() {
             window.location.href = "/panel/dashboard/";
         }
     </script>
+
+    <!-- JS de Alumnos -->
     <script src="{% static 'js/alumnos.js' %}"></script>
+
 </body>
 </html>

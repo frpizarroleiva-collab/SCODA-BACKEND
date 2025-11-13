@@ -15,6 +15,7 @@ class Alumno(models.Model):
         null=True,
         related_name="alumnos"
     )
+
     class Meta:
         db_table = 'alumno'
 
@@ -23,6 +24,22 @@ class Alumno(models.Model):
 
 
 class PersonaAutorizadaAlumno(models.Model):
+
+    # -----------------------------------------------
+    # CHOICES PROFESIONALES PARA PARENTESCO
+    # -----------------------------------------------
+    class ParentescoChoices(models.TextChoices):
+        PADRE = "Padre", "Padre"
+        MADRE = "Madre", "Madre"
+        ABUELO = "Abuelo", "Abuelo"
+        ABUELA = "Abuela", "Abuela"
+        TIO = "Tío", "Tío"
+        TIA = "Tía", "Tía"
+        HERMANO = "Hermano", "Hermano"
+        HERMANA = "Hermana", "Hermana"
+        APODERADO = "Apoderado", "Apoderado"
+        OTRO = "Otro", "Otro"
+
     alumno = models.ForeignKey(
         'alumnos.Alumno',
         on_delete=models.CASCADE,
@@ -33,17 +50,45 @@ class PersonaAutorizadaAlumno(models.Model):
         on_delete=models.CASCADE,
         related_name="autorizaciones"
     )
-    tipo_relacion = models.CharField(max_length=80)  #apoderado
+
+    # -----------------------------------------------
+    # TIPO RELACIÓN (solo lógica interna)
+    # -----------------------------------------------
+    tipo_relacion = models.CharField(
+        max_length=80,
+        default="apoderado"
+    )
+
+    # -----------------------------------------------
+    # PARENTESCO (información real)
+    # -----------------------------------------------
+    parentesco = models.CharField(
+        max_length=20,
+        choices=ParentescoChoices.choices,
+        default=ParentescoChoices.APODERADO
+    )
+
     autorizado = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'persona_autorizada_alumno'
         unique_together = (('alumno', 'persona'),)
 
+    # -----------------------------------------------
+    # VALIDACIONES IMPORTANTES
+    # -----------------------------------------------
     def clean(self):
-        # Límite de 3 apoderados por alumno
+
+        # 🔒 Límite de 3 personas asociadas por alumno
         if self.alumno.relaciones_personas.count() >= 3 and not self.pk:
             raise ValidationError("Un alumno no puede tener más de 3 personas asociadas.")
+
+        # 🔒 Impedir que un ALUMNO sea apoderado/autorizado
+        # Si la persona tiene atributo .alumno → significa que es alumno
+        if hasattr(self.persona, "alumno"):
+            raise ValidationError(
+                "Esta persona es un ALUMNO y no puede ser registrada como apoderado o autorizado."
+            )
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -51,26 +96,3 @@ class PersonaAutorizadaAlumno(models.Model):
 
     def __str__(self):
         return f"{self.persona.nombres} autorizado para {self.alumno.persona.nombres}"
-
-
-class QrAutorizacion(models.Model):
-    persona_autorizada = models.ForeignKey(
-        'alumnos.PersonaAutorizadaAlumno',
-        on_delete=models.CASCADE,
-        related_name="qrs"
-    )
-    alumno = models.ForeignKey(
-        'alumnos.Alumno',
-        on_delete=models.CASCADE,
-        related_name="qrs"
-    )
-    fecha_autorizacion = models.DateTimeField()
-    codigo_qr = models.CharField(unique=True, max_length=120)
-    valido_hasta = models.DateTimeField()
-
-    class Meta:
-        db_table = 'qr_autorizacion'
-        unique_together = (('persona_autorizada', 'alumno', 'codigo_qr'),)
-
-    def __str__(self):
-        return f"QR {self.codigo_qr} → {self.alumno.persona.nombres}"

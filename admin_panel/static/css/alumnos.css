@@ -1,6 +1,6 @@
 /* ===============================
    ESTILOS GENERALES SCODA
-   =============================== */
+=============================== */
 body {
     font-family: "Segoe UI", Arial, sans-serif;
     background: #f4f6f9;
@@ -17,44 +17,12 @@ main {
     padding: 20px;
 }
 
-h2, h3, h4, h5 {
-    color: #007bff;
-    font-weight: 600;
-}
-
 /* ===============================
    TABLAS
-   =============================== */
+=============================== */
 .table-hover tbody tr:hover {
     background: #f1fdf4;
     transition: background 0.3s ease;
-}
-
-/* ===============================
-   BOTONES
-   =============================== */
-button {
-    padding: 6px 10px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-button.add { background: #28a745; color: white; }
-button.edit { background: #ffc107; color: #212529; }
-button.delete { background: #dc3545; color: white; }
-button.back, button.close { background: #6c757d; color: white; }
-
-button:hover {
-    opacity: 0.9;
-    transition: opacity 0.2s ease;
-}
-
-/* ===============================
-   TABLA DE ALUMNOS
-   =============================== */
-#tablaAlumnos tbody tr {
-    transition: all 0.2s ease;
 }
 
 #tablaAlumnos tbody tr:hover {
@@ -73,8 +41,8 @@ button:hover {
 }
 
 /* ===============================
-   MODALES
-   =============================== */
+   MODALES GENERALES
+=============================== */
 .modal-content {
     border-radius: 10px;
     border: none;
@@ -83,7 +51,7 @@ button:hover {
 
 /* ===============================
    MODAL DETALLE DE ALUMNO
-   =============================== */
+=============================== */
 #modalDetalleAlumno .modal-content {
     border-top: 5px solid #198754;
 }
@@ -103,12 +71,6 @@ button:hover {
     color: #0d6efd;
 }
 
-#modalDetalleAlumno .modal-footer button {
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-/* Avatar del alumno */
 #detalleAlumnoContainer .avatar {
     width: 90px;
     height: 90px;
@@ -118,25 +80,9 @@ button:hover {
     margin-bottom: 12px;
 }
 
-#detalleAlumnoContainer .alumno-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-#detalleAlumnoContainer .alumno-header h5 {
-    font-weight: 700;
-    color: #198754;
-    margin-bottom: 0;
-}
-
-#detalleAlumnoContainer .alumno-header p {
-    margin: 0;
-    color: #6c757d;
-}
-
 /* ===============================
    FORMULARIOS FAMILIA / EDICIÓN
-   =============================== */
+=============================== */
 #formFamilia fieldset legend {
     color: #198754;
     font-weight: bold;
@@ -149,7 +95,6 @@ button:hover {
     padding: 5px 10px;
     border-radius: 6px;
     cursor: pointer;
-    transition: background 0.2s ease;
 }
 
 #formFamilia button.delete:hover {
@@ -157,8 +102,62 @@ button:hover {
 }
 
 /* ===============================
+   BLOQUES DINÁMICOS (HIJOS + APODERADOS EXTRA)
+=============================== */
+#contenedorHijos > div,
+#contenedorApoderadosExtra > div {
+    transition: all 0.25s ease;
+}
+
+.bloque-apoderado-extra,
+.bloque-hijo {
+    border: 1px solid #dcdcdc;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.bloque-apoderado-extra h6,
+.bloque-hijo h6 {
+    color: #198754;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.bloque-apoderado-extra button.delete,
+.bloque-hijo button.delete {
+    background: #dc3545;
+    color: #fff;
+    border-radius: 6px;
+    border: none;
+    padding: 5px 10px;
+}
+
+.bloque-apoderado-extra button.delete:hover,
+.bloque-hijo button.delete:hover {
+    background: #b02a37;
+}
+
+/* ===============================
+   BOTONES AGREGAR
+=============================== */
+#btnAgregarHijo,
+#btnAgregarApoderadoExtra {
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+#btnAgregarHijo:hover,
+#btnAgregarApoderadoExtra:hover {
+    transform: scale(1.03);
+    transition: 0.15s ease;
+}
+
+/* ===============================
    NOTIFICACIÓN
-   =============================== */
+=============================== */
 #notificacion {
     position: fixed;
     top: 20px;
@@ -174,7 +173,7 @@ button:hover {
 
 /* ===============================
    LOADER
-   =============================== */
+=============================== */
 #loader {
     display: none;
     position: fixed;
@@ -201,11 +200,26 @@ button:hover {
 
 /* ===============================
    FOOTER
-   =============================== */
+=============================== */
 footer {
     font-size: 0.9rem;
     color: #6c757d;
     text-align: center;
-    padding: 10px 0;
+    padding: 15px 0;
     border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+    margin-top: auto;
+}
+
+/* ===============================
+   BADGES
+=============================== */
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #fff !important;
+}
+
+/* Modal de nuevo autorizado */
+#modalNuevoAutorizado .modal-content {
+    border-top: 4px solid #0d6efd;
 }
