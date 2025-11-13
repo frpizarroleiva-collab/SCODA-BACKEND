@@ -1,19 +1,20 @@
-// ===============================
+// ======================================
 // DASHBOARD.JS — SCODA
-// ===============================
+// ======================================
 document.addEventListener("DOMContentLoaded", () => {
-    // ======================
-    // MENSAJE DE ÉXITO
-    // ======================
+
+    // ------------------------------
+    // MENSAJE DE ÉXITO LOGIN
+    // ------------------------------
     const params = new URLSearchParams(window.location.search);
     if (params.get("status") === "success") {
         const msg = document.getElementById("status-message");
         if (msg) msg.classList.remove("d-none");
     }
 
-    // ======================
-    // CONFIGURACIÓN GLOBAL
-    // ======================
+    // ------------------------------
+    // CONFIG GLOBAL TOKENS
+    // ------------------------------
     const { API_BASE_URL, SCODA_API_KEY, ACCESS_TOKEN } = window.SCODA_CONFIG || {};
 
     if (ACCESS_TOKEN) localStorage.setItem("access_token", ACCESS_TOKEN);
@@ -31,49 +32,180 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // ======================
-    // CARGAR CONTEOS
-    // ======================
-    async function cargarConteos() {
+    const BASE = localStorage.getItem("API_BASE_URL");
+
+    // ============================================================
+    // 🔽 1. CARGAR LISTA DE CURSOS PARA EL FILTRO
+    // ============================================================
+    async function cargarCursos() {
         try {
-            const base = localStorage.getItem("API_BASE_URL");
+            const res = await fetch(`${BASE}/api/cursos`, { headers: getHeaders() });
+            const data = await res.json();
 
-            const endpoints = {
-                usuarios: `${base}/api/usuarios`,
-                alumnos: `${base}/api/alumnos`,
-                cursos: `${base}/api/cursos`,
-                personas: `${base}/api/personas`,
-            };
+            const select = document.getElementById("filtro-curso");
+            data.forEach(curso => {
+                const op = document.createElement("option");
+                op.value = curso.id;
+                op.textContent = curso.nombre;
+                select.appendChild(op);
+            });
 
-            const [resUsuarios, resAlumnos, resCursos, resPersonas] = await Promise.all([
-                fetch(endpoints.usuarios, { headers: getHeaders() }),
-                fetch(endpoints.alumnos, { headers: getHeaders() }),
-                fetch(endpoints.cursos, { headers: getHeaders() }),
-                fetch(endpoints.personas, { headers: getHeaders() }),
-            ]);
-
-            const [usuarios, alumnos, cursos, personas] = await Promise.all([
-                resUsuarios.json(),
-                resAlumnos.json(),
-                resCursos.json(),
-                resPersonas.json(),
-            ]);
-
-            document.getElementById("usuarios-count").textContent = usuarios.length ?? "--";
-            document.getElementById("alumnos-count").textContent = alumnos.length ?? "--";
-            document.getElementById("cursos-count").textContent = cursos.length ?? "--";
-            document.getElementById("personas-count").textContent = personas.length ?? "--";
-
-        } catch (error) {
-            console.error("Error al obtener conteos:", error);
+        } catch (e) {
+            console.error("Error cargando cursos:", e);
         }
     }
 
-    cargarConteos();
+    cargarCursos();
 
-    // ======================
-    // MODO OSCURO / CLARO
-    // ======================
+    // ============================================================
+    // 🔽 2. CARGAR TARJETAS (Resumen general)
+    // ============================================================
+    async function cargarTarjetas(cursoId = "") {
+        try {
+            const q = cursoId ? `?curso_id=${cursoId}` : "";
+
+            const endpoints = {
+                ausentes: `${BASE}/api/estado-alumnos/ausentes${q}`,
+                extension: `${BASE}/api/estado-alumnos/extension${q}`,
+                anticipados: `${BASE}/api/estado-alumnos/retiros-anticipados${q}`,
+                retiros: `${BASE}/api/estado-alumnos/retiros${q}`,
+            };
+
+            const [a1, a2, a3, a4] = await Promise.all([
+                fetch(endpoints.ausentes, { headers: getHeaders() }),
+                fetch(endpoints.extension, { headers: getHeaders() }),
+                fetch(endpoints.anticipados, { headers: getHeaders() }),
+                fetch(endpoints.retiros, { headers: getHeaders() }),
+            ]);
+
+            const [aus, ext, ant, ret] = await Promise.all([
+                a1.json(),
+                a2.json(),
+                a3.json(),
+                a4.json(),
+            ]);
+
+            document.getElementById("ausentes-count").textContent = aus.total_ausentes ?? "--";
+            document.getElementById("extension-count").textContent = ext.total_extension ?? "--";
+            document.getElementById("anticipados-count").textContent = ant.total_retiros_anticipados ?? "--";
+            document.getElementById("retiros-count").textContent = ret.total_retiros ?? "--";
+
+            document.getElementById("anticipados-count-card").textContent =
+                ant.total_retiros_anticipados ?? "--";
+
+            // Actualizar gráfico
+            actualizarGrafico({
+                ausentes: aus.total_ausentes || 0,
+                extension: ext.total_extension || 0,
+                anticipados: ant.total_retiros_anticipados || 0,
+                retiros: ret.total_retiros || 0
+            });
+
+        } catch (err) {
+            console.error("Error cargando tarjetas:", err);
+        }
+    }
+
+    // ============================================================
+    // 🔽 3. LISTADOS RÁPIDOS (últimos 5)
+    // ============================================================
+    async function cargarListadosRapidos(cursoId = "") {
+        const q = cursoId ? `?curso_id=${cursoId}` : "";
+
+        const zonas = {
+            retiros: "lista-retiros",
+            ausentes: "lista-ausentes",
+            extension: "lista-extension",
+        };
+
+        const urls = {
+            retiros: `${BASE}/api/estado-alumnos/retiros${q}`,
+            ausentes: `${BASE}/api/estado-alumnos/ausentes${q}`,
+            extension: `${BASE}/api/estado-alumnos/extension${q}`,
+        };
+
+        for (let tipo in urls) {
+            try {
+                const res = await fetch(urls[tipo], { headers: getHeaders() });
+                const data = await res.json();
+
+                const lista = document.getElementById(zonas[tipo]);
+                lista.innerHTML = "";
+
+                (data.alumnos || []).slice(0, 5).forEach(item => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item";
+                    li.innerHTML = `
+                        <strong>${item.alumno_nombre}</strong>
+                        <br>
+                        <small>${item.curso_nombre || ""}</small>
+                        <br>
+                        <small class="text-muted">${item.hora_registro}</small>
+                    `;
+                    lista.appendChild(li);
+                });
+
+            } catch (e) {
+                console.error("Error cargando listado:", e);
+            }
+        }
+    }
+
+    // ============================================================
+    // 🔽 4. GRÁFICO (Chart.js)
+    // ============================================================
+    let chartEstados = null;
+
+    function actualizarGrafico({ ausentes, extension, anticipados, retiros }) {
+        const ctx = document.getElementById("grafico-estados");
+
+        if (chartEstados) chartEstados.destroy();
+
+        chartEstados = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: ["Ausentes", "Extensión", "Anticipados", "Retiros"],
+                datasets: [{
+                    label: "Cantidad",
+                    data: [ausentes, extension, anticipados, retiros],
+                    backgroundColor: [
+                        "#e63946",
+                        "#8e44ad",
+                        "#f4d03f",
+                        "#2ecc71"
+                    ],
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
+    }
+
+    // ============================================================
+    // 🔽 5. CARGAR TODO INICIAL
+    // ============================================================
+    function cargarTodo() {
+        const cursoSel = document.getElementById("filtro-curso").value;
+        cargarTarjetas(cursoSel);
+        cargarListadosRapidos(cursoSel);
+    }
+
+    cargarTodo();
+
+    // ============================================================
+    // 🔽 6. FILTRO POR CURSO
+    // ============================================================
+    document.getElementById("filtro-curso").addEventListener("change", () => {
+        cargarTodo();
+    });
+
+    // ============================================================
+    // 🌙 MODO OSCURO / CLARO
+    // ============================================================
     const themeBtn = document.getElementById("toggle-theme");
     const currentTheme = localStorage.getItem("theme") || "light";
 
@@ -95,4 +227,5 @@ document.addEventListener("DOMContentLoaded", () => {
             icon.classList.replace("bi-brightness-high", "bi-moon-fill");
         }
     }
+
 });

@@ -1,3 +1,6 @@
+/* =============================
+   🎨 ESTILOS BASE
+============================= */
 body {
     background-color: #f7f9fa;
     font-family: "Inter", Arial, sans-serif;
@@ -9,7 +12,7 @@ body {
 #wrapper {
     display: flex;
     flex-grow: 1;
-    margin-top: 56px; /* Compensa navbar fija */
+    margin-top: 56px;
 }
 
 /* SIDEBAR */
@@ -26,7 +29,9 @@ body {
     margin-left: 230px;
 }
 
-/* TARJETAS */
+/* =============================
+   🎨 TARJETAS ANTIGUAS (compatibilidad)
+============================= */
 .card {
     border-radius: 14px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -34,19 +39,64 @@ body {
 
 .card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 
-/* FOOTER */
-.footer {
+/* =============================
+   💚 NUEVAS TARJETAS SCODA APP
+============================= */
+.scoda-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #f1f1f1;
+    transition: 0.2s ease;
+}
+
+.scoda-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+/* Punto de color */
+.status-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+}
+
+/* Colores */
+.bg-purple {
+    background: #8e44ad !important;
+}
+
+.bg-orange {
+    background: #ff922b !important;
+}
+
+/* =============================
+   📊 GRÁFICO (Chart.js)
+============================= */
+#grafico-estados {
+    max-height: 300px;
+}
+
+/* =============================
+   📋 LISTADOS RÁPIDOS
+============================= */
+.list-group small {
     font-size: 13px;
-    color: #666;
-    margin-top: auto;
 }
 
-/* ================================
-   MODO OSCURO / CLARO SCODA
-================================ */
+.list-group-item {
+    padding: 8px 10px;
+}
+
+/* =============================
+   🌙 MODO OSCURO COMPLETO
+============================= */
 body[data-theme="dark"] {
     background-color: #1e1e1e;
     color: #ddd;
@@ -68,7 +118,34 @@ body[data-theme="dark"] .nav-link {
 body[data-theme="dark"] .card {
     background-color: #2d2d2d;
     color: #f1f1f1;
+    border-color: #444;
+}
+
+body[data-theme="dark"] .scoda-card {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #f1f1f1;
     box-shadow: 0 4px 12px rgba(255,255,255,0.05);
+}
+
+body[data-theme="dark"] .status-dot.bg-danger {
+    background: #ff6b6b !important;
+}
+
+body[data-theme="dark"] .status-dot.bg-warning {
+    background: #ffd36b !important;
+}
+
+body[data-theme="dark"] .status-dot.bg-success {
+    background: #6bff9b !important;
+}
+
+body[data-theme="dark"] .status-dot.bg-purple {
+    background: #c27cff !important;
+}
+
+body[data-theme="dark"] .status-dot.bg-orange {
+    background: #ffc078 !important;
 }
 
 body[data-theme="dark"] .footer {
@@ -81,14 +158,11 @@ body[data-theme="dark"] .alert-success {
     color: #c0f2b8;
 }
 
+/* =============================
+   ⚙ ESTRUCTURA GENERAL
+============================= */
 html, body {
     height: 100%;
-}
-
-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
 }
 
 main {

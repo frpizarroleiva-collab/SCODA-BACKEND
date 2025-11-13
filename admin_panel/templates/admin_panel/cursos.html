@@ -1,311 +1,102 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Cursos</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
-        h2 { color: #007BFF; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #007BFF; color: white; }
-        input[type="time"] { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; }
-        button.add { background: #28a745; color: white; margin-bottom: 10px; }
-        button.edit { background: #ffc107; }
-        button.delete { background: #dc3545; color: white; }
-        button.view { background: #17a2b8; color: white; }
-        button.save { background: #007BFF; color: white; }
-        button.back { background: #6c757d; color: white; margin-bottom: 15px; }
+    <title>Gestión de Cursos | SCODA</title>
 
-        .modal {
-            display: none; position: fixed; z-index: 10;
-            left: 0; top: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Estilos SCODA -->
+    <link rel="stylesheet" href="{% static 'css/usuarios.css' %}">
+    <link rel="stylesheet" href="{% static 'css/cursos.css' %}">
+
+    <style>
+        /* 🔹 Ajuste de encabezado común */
+        header.bg-success h4, header.bg-success .fw-bold {
+            color: #fff !important;
         }
-        .modal-content {
-            background: white; padding: 20px; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;
+        .table thead {
+            background-color: #198754;
+            color: white;
         }
-        input, select {
-            width: 100%; padding: 8px; margin: 8px 0;
-            border: 1px solid #ccc; border-radius: 6px;
+        .btn-add {
+            background-color: #28a745;
+            color: white;
         }
-        table.alumnos { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table.alumnos th { background: #17a2b8; color: white; }
-        table.alumnos td, table.alumnos th { border: 1px solid #ddd; padding: 6px; }
+        .btn-edit { background-color: #ffc107; color: black; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-view { background-color: #17a2b8; color: white; }
+        .btn-save { background-color: #007bff; color: white; }
     </style>
 </head>
 <body>
-    <h2>Gestión de Cursos</h2>
 
-    <button class="back" onclick="volverDashboard()">← Volver al Dashboard</button>
-    <button class="add" onclick="abrirModal()">+ Nuevo curso</button>
+    <!-- ✅ Encabezado principal -->
+    <header class="bg-success text-white d-flex justify-content-between align-items-center px-4 py-3 shadow-sm">
+        <h4 class="m-0 fw-bold">Gestión de Cursos</h4>
+        <button class="btn btn-light btn-sm fw-semibold" onclick="volverDashboard()">
+            <i class="bi bi-arrow-left-circle me-1"></i> Volver
+        </button>
+    </header>
 
-    <table id="cursos-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Nivel</th>
-                <th>Profesor</th>
-                <th>Establecimiento</th>
-                <th>Inicio</th>
-                <th>Término</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <!-- Modal Crear/Editar Curso -->
-    <div class="modal" id="modalCurso">
-        <div class="modal-content">
-            <h3 id="modalTitulo">Nuevo Curso</h3>
-            <form id="cursoForm" onsubmit="guardarCurso(event)">
-                <input type="hidden" id="cursoIdHidden">
-
-                <label>Nombre:</label>
-                <input type="text" id="nombre" placeholder="Ej: 4° Básico A" required>
-
-                <label>Nivel:</label>
-                <input type="number" id="nivel" min="1" placeholder="Ej: 4" required>
-
-                <label>Profesor:</label>
-                <select id="profesor"></select>
-
-                <label>Establecimiento:</label>
-                <select id="establecimiento" required></select>
-
-                <button type="submit" style="background:#007BFF;color:white;">Guardar</button>
-                <button type="button" onclick="cerrarModal()">Cancelar</button>
-            </form>
+    <!-- ✅ Contenido principal -->
+    <main class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-success fw-bold mb-0">Listado de Cursos</h5>
+            <button class="btn btn-success" onclick="abrirModal()">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Curso
+            </button>
         </div>
+
+        <div class="table-responsive shadow-sm">
+            <table class="table table-hover align-middle text-center" id="cursos-table">
+                <thead class="table-success">
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Nivel</th>
+                        <th>Profesor</th>
+                        <th>Establecimiento</th>
+                        <th>Inicio</th>
+                        <th>Término</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- 🔹 Modal Crear/Editar -->
+        {% include "admin_panel/includes/cursos_modal.html" %}
+        <!-- 🔹 Modal Ver alumnos -->
+        {% include "admin_panel/includes/cursos_alumnos_modal.html" %}
+    </main>
+
+    <!-- ✅ Footer común -->
+    {% include "admin_panel/includes/footer.html" %}
+
+    <!-- ✅ Notificación y Loader -->
+    <div id="notificacion"></div>
+    <div id="loader">
+        <div class="spinner-border text-success" role="status"></div> Cargando...
     </div>
 
-    <!-- Modal Ver Alumnos -->
-    <div class="modal" id="modalAlumnos">
-        <div class="modal-content">
-            <h3>Alumnos del Curso</h3>
-            <div id="alumnosContainer"></div>
-            <button style="margin-top:10px;background:#6c757d;color:white;" onclick="cerrarModalAlumnos()">Cerrar</button>
-        </div>
-    </div>
-
+    <!-- Bootstrap y scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE_URL = "{{ API_BASE_URL }}";
-        const SCODA_API_KEY = "{{ SCODA_API_KEY }}";
-        const ACCESS_TOKEN = "{{ ACCESS_TOKEN }}";
-        const API_URL = `${API_BASE_URL}/api/cursos`;
+        window.SCODA_CONFIG = {
+            API_BASE_URL: "{{ API_BASE_URL }}",
+            SCODA_API_KEY: "{{ SCODA_API_KEY }}",
+            ACCESS_TOKEN: "{{ ACCESS_TOKEN }}"
+        };
 
-        if (ACCESS_TOKEN && !localStorage.getItem('access_token')) {
-            localStorage.setItem('access_token', ACCESS_TOKEN);
+        function volverDashboard() {
+            window.location.href = "/panel/dashboard/";
         }
-        const token = localStorage.getItem('access_token');
-
-        function getHeaders() {
-        return {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : '',
-            'X-API-Key': SCODA_API_KEY   // ← usa esta forma exacta
-            };
-        }
-
-
-        // =============================
-        // CARGAR SELECTS
-        // =============================
-        async function cargarSelects() {
-            const profRes = await fetch(`${API_BASE_URL}/api/personas`, { headers: getHeaders() });
-            const profesores = await profRes.json();
-            const profesorSelect = document.getElementById('profesor');
-            profesorSelect.innerHTML = '<option value="">Sin profesor asignado</option>';
-            profesores.forEach(p => {
-                profesorSelect.innerHTML += `<option value="${p.id}">${p.nombres} ${p.apellido_uno}</option>`;
-            });
-
-            const estRes = await fetch(`${API_BASE_URL}/api/establecimientos`, { headers: getHeaders() });
-            const establecimientos = await estRes.json();
-            const estSelect = document.getElementById('establecimiento');
-            estSelect.innerHTML = '<option value="">Seleccione establecimiento</option>';
-            establecimientos.forEach(e => {
-                estSelect.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
-            });
-        }
-
-        // =============================
-        // CARGAR CURSOS
-        // =============================
-        async function cargarCursos() {
-            try {
-                const res = await fetch(API_URL, { headers: getHeaders() });
-                if (!res.ok) throw new Error(`Error ${res.status}`);
-                const data = await res.json();
-
-                const tbody = document.querySelector('#cursos-table tbody');
-                tbody.innerHTML = '';
-                data.forEach((c, i) => {
-                    const horaInicio = c.hora_inicio ? c.hora_inicio.slice(0,5) : '08:00';
-                    const horaTermino = c.hora_termino ? c.hora_termino.slice(0,5) : '15:30';
-                    tbody.innerHTML += `
-                        <tr data-id="${c.id}">
-                            <td>${i + 1}</td>
-                            <td>${c.nombre}</td>
-                            <td>${c.nivel}</td>
-                            <td>${c.profesor_nombre || '—'}</td>
-                            <td>${c.establecimiento_nombre || '—'}</td>
-                            <td><input type="time" id="inicio-${c.id}" value="${horaInicio}"></td>
-                            <td><input type="time" id="termino-${c.id}" value="${horaTermino}"></td>
-                            <td>
-                                <button class="save" onclick="actualizarHorario(${c.id})">Guardar horario</button>
-                                <button class="view" onclick="verAlumnos(${c.id})">👁 Ver</button>
-                                <button class="edit" onclick="editarCurso(${c.id})">✏️</button>
-                                <button class="delete" onclick="eliminarCurso(${c.id})">🗑</button>
-                            </td>
-                        </tr>`;
-                });
-            } catch (error) {
-                console.error('Error al cargar cursos:', error);
-                alert('No se pudieron cargar los cursos.');
-            }
-        }
-
-        // =============================
-        // ACTUALIZAR HORARIO
-        // =============================
-        async function actualizarHorario(id) {
-            const hora_inicio = document.getElementById(`inicio-${id}`).value;
-            const hora_termino = document.getElementById(`termino-${id}`).value;
-
-            try {
-                const res = await fetch(`${API_URL}/${id}/actualizar-horario`, {
-                    method: 'PUT',
-                    headers: getHeaders(),
-                    body: JSON.stringify({ hora_inicio, hora_termino })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert(`Horario actualizado: ${data.hora_inicio} - ${data.hora_termino}`);
-                } else {
-                    alert(data.error || 'Error al actualizar horario');
-                }
-            } catch (error) {
-                console.error('Error al actualizar horario:', error);
-                alert('Error al guardar horario.');
-            }
-        }
-
-        // =============================
-        // MODALES / CRUD / VER ALUMNOS
-        // =============================
-        function abrirModal(curso = null) {
-            const modal = document.getElementById('modalCurso');
-            modal.style.display = 'flex';
-            document.getElementById('cursoForm').reset();
-            document.getElementById('cursoIdHidden').value = curso?.id || '';
-            document.getElementById('modalTitulo').textContent = curso ? 'Editar Curso' : 'Nuevo Curso';
-
-            if (curso) {
-                document.getElementById('nombre').value = curso.nombre;
-                document.getElementById('nivel').value = curso.nivel;
-                document.getElementById('profesor').value = curso.profesor || '';
-                document.getElementById('establecimiento').value = curso.establecimiento || '';
-            }
-        }
-
-        function cerrarModal() { document.getElementById('modalCurso').style.display = 'none'; }
-
-        async function guardarCurso(e) {
-            e.preventDefault();
-            const id = document.getElementById('cursoIdHidden').value;
-            const url = id ? `${API_URL}/${id}` : API_URL;
-            const method = id ? 'PUT' : 'POST';
-
-            const curso = {
-                nombre: document.getElementById('nombre').value,
-                nivel: parseInt(document.getElementById('nivel').value),
-                profesor: document.getElementById('profesor').value ? parseInt(document.getElementById('profesor').value) : null,
-                establecimiento: parseInt(document.getElementById('establecimiento').value)
-            };
-
-            try {
-                const res = await fetch(url, { method, headers: getHeaders(), body: JSON.stringify(curso) });
-                if (res.ok) {
-                    alert("Curso guardado correctamente");
-                    cerrarModal();
-                    cargarCursos();
-                } else {
-                    const errData = await res.json();
-                    alert("Error al guardar: " + (errData.detail || JSON.stringify(errData)));
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Error general al guardar curso");
-            }
-        }
-
-        async function verAlumnos(cursoId) {
-            const modal = document.getElementById('modalAlumnos');
-            const cont = document.getElementById('alumnosContainer');
-            cont.innerHTML = '<p>Cargando alumnos...</p>';
-            modal.style.display = 'flex';
-
-            try {
-                const res = await fetch(`${API_URL}/${cursoId}/alumnos`, { headers: getHeaders() });
-                const data = await res.json();
-                const alumnos = data.results || [];
-
-                if (alumnos.length === 0) {
-                    cont.innerHTML = '<p>Este curso aún no tiene alumnos registrados.</p>';
-                    return;
-                }
-
-                let tabla = `
-                    <table class="alumnos">
-                        <thead>
-                            <tr><th>#</th><th>Nombre</th><th>RUN</th><th>Estado actual</th><th>Observación</th></tr>
-                        </thead><tbody>`;
-                alumnos.forEach((a, i) => {
-                    tabla += `<tr>
-                        <td>${i + 1}</td>
-                        <td>${a.nombre_completo}</td>
-                        <td>${a.rut}</td>
-                        <td>${a.estado_actual}</td>
-                        <td>${a.observacion || '—'}</td>
-                    </tr>`;
-                });
-                tabla += '</tbody></table>';
-                cont.innerHTML = tabla;
-            } catch (error) {
-                console.error('Error al obtener alumnos:', error);
-                cont.innerHTML = '<p>Error al cargar los alumnos del curso.</p>';
-            }
-        }
-
-        function cerrarModalAlumnos() { document.getElementById('modalAlumnos').style.display = 'none'; }
-
-        function eliminarCurso(id) {
-            if (confirm("¿Seguro que deseas eliminar este curso?")) {
-                fetch(`${API_URL}/${id}`, { method: "DELETE", headers: getHeaders() })
-                    .then(res => {
-                        if (res.status === 204) {
-                            alert("Curso eliminado correctamente");
-                            document.querySelector(`tr[data-id='${id}']`).remove();
-                        }
-                    });
-            }
-        }
-
-        function volverDashboard() { window.location.href = "/panel/dashboard/"; }
-
-        window.onclick = function(e) {
-            const modal1 = document.getElementById('modalCurso');
-            const modal2 = document.getElementById('modalAlumnos');
-            if (e.target === modal1) modal1.style.display = 'none';
-            if (e.target === modal2) modal2.style.display = 'none';
-        }
-
-        // Inicial
-        cargarSelects().then(cargarCursos);
     </script>
+    <script src="{% static 'js/cursos.js' %}"></script>
 </body>
 </html>

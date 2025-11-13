@@ -1,0 +1,43 @@
+<!-- ===========================================================
+     MODAL DETALLE DE ALUMNO — SCODA
+=========================================================== -->
+<div class="modal fade" id="modalDetalleAlumno" tabindex="-1" aria-labelledby="modalDetalleAlumnoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+
+      <!-- HEADER -->
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold" id="modalDetalleAlumnoLabel">
+          <i class="bi bi-person-vcard me-2"></i> Ficha del Alumno
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <!-- BODY -->
+      <div class="modal-body">
+        <div id="detalleAlumnoContainer" class="px-2">
+          <!-- CARGA DINÁMICA DESDE JS -->
+          <div class="text-center text-muted py-4">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="mt-2 mb-0">Cargando información del alumno...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="modal-footer d-flex justify-content-between flex-wrap">
+        <div>
+          <button id="btnExportCSV" class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Exportar CSV
+          </button>
+          <button id="btnExportPDF" class="btn btn-outline-danger">
+            <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+          </button>
+        </div>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

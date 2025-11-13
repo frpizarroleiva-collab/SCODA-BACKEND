@@ -14,32 +14,40 @@
     <link rel="stylesheet" href="{% static 'css/alumnos.css' %}">
 
     <style>
-        /* 🔹 Asegura que el título sea blanco, igual que en Usuarios */
+        /* Ajuste para mantener coherencia con el panel */
         header.bg-success h4,
         header.bg-success .fw-bold {
             color: #fff !important;
+        }
+        main {
+            min-height: calc(100vh - 120px);
         }
     </style>
 </head>
 <body data-theme="light">
 
-    <!-- ✅ Encabezado igual que "Gestión de Usuarios" -->
+    <!-- ✅ Encabezado -->
     <header class="bg-success text-white d-flex justify-content-between align-items-center px-4 py-3 shadow-sm">
-        <h4 class="m-0 fw-bold">Gestión de Alumnos</h4>
+        <h4 class="m-0 fw-bold">
+            <i class="bi bi-mortarboard me-2"></i> Gestión de Alumnos
+        </h4>
         <button class="btn btn-light btn-sm fw-semibold" onclick="volverDashboard()">
             <i class="bi bi-arrow-left-circle me-1"></i> Volver
         </button>
     </header>
 
-    <!-- ✅ Contenedor principal -->
+    <!-- ✅ Contenido principal -->
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-success fw-bold mb-0">Listado de Alumnos</h5>
+            <h5 class="text-success fw-bold mb-0">
+                <i class="bi bi-people-fill me-2"></i> Listado de Alumnos
+            </h5>
             <button id="btnAbrirModal" class="btn btn-success">
                 <i class="bi bi-person-plus me-1"></i> Agregar Familia
             </button>
         </div>
 
+        <!-- ✅ Tabla -->
         <div class="table-responsive shadow-sm">
             <table class="table table-hover align-middle" id="tablaAlumnos">
                 <thead class="table-success text-center">
@@ -51,19 +59,25 @@
                         <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="text-center"></tbody>
+                <tbody class="text-center">
+                    <!-- Contenido dinámico generado por JS -->
+                </tbody>
             </table>
         </div>
 
+        <!-- ✅ Modales -->
         {% include "admin_panel/includes/alumnos_modales.html" %}
+        {% include "admin_panel/includes/alumnos_detalle_modal.html" %}
     </main>
 
-    <!-- ✅ Footer común -->
+    <!-- ✅ Footer -->
     {% include "admin_panel/includes/footer.html" %}
 
+    <!-- ✅ Loader y notificación -->
     <div id="notificacion"></div>
     <div id="loader">
-        <div class="spinner-border text-success" role="status"></div> Cargando...
+        <div class="spinner-border text-success" role="status"></div>
+        Cargando...
     </div>
 
     <!-- Bootstrap y JS -->

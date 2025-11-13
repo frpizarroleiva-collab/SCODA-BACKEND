@@ -7,33 +7,44 @@ const token = ACCESS_TOKEN;
 // =======================================
 // ELEMENTOS
 // =======================================
-const modal = document.getElementById("modalForm");
+const modalFamilia = document.getElementById("modalForm");
 const modalEditar = document.getElementById("modalEditar");
 const btnAbrir = document.getElementById("btnAbrirModal");
 const btnCerrar = document.getElementById("cerrarModal");
 const btnCerrarEditar = document.getElementById("cerrarEditar");
-const form = document.getElementById("formFamilia");
+const formFamilia = document.getElementById("formFamilia");
 const formEditar = document.getElementById("formEditar");
 const contenedorHijos = document.getElementById("contenedorHijos");
 const btnAgregarHijo = document.getElementById("btnAgregarHijo");
 const tablaBody = document.querySelector("#tablaAlumnos tbody");
 const notificacion = document.getElementById("notificacion");
 const loader = document.getElementById("loader");
+const btnExportCSV = document.getElementById("btnExportCSV");
+const btnExportPDF = document.getElementById("btnExportPDF");
 
 let cursosCache = [];
+let alumnoSeleccionado = null;
 
 // =======================================
 // FUNCIONES AUXILIARES
 // =======================================
-function mostrarNotificacion(mensaje, color="#007BFF") {
+function mostrarNotificacion(mensaje, color = "#007BFF") {
     notificacion.textContent = mensaje;
     notificacion.style.background = color;
     notificacion.style.display = "block";
-    setTimeout(() => notificacion.style.display = "none", 2500);
+    setTimeout(() => (notificacion.style.display = "none"), 2500);
 }
 
 function mostrarLoader(mostrar) {
     loader.style.display = mostrar ? "flex" : "none";
+}
+
+function getHeaders() {
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-API-Key": SCODA_API_KEY
+    };
 }
 
 // =======================================
@@ -41,12 +52,7 @@ function mostrarLoader(mostrar) {
 // =======================================
 async function cargarCursos() {
     mostrarLoader(true);
-    const res = await fetch(`${API_BASE_URL}/api/cursos`, {
-        headers: { 
-            "Authorization": `Bearer ${token}`,
-            "X-API-Key": SCODA_API_KEY 
-        }
-    });
+    const res = await fetch(`${API_BASE_URL}/api/cursos`, { headers: getHeaders() });
     cursosCache = await res.json();
     mostrarLoader(false);
 }
@@ -57,13 +63,9 @@ async function cargarCursos() {
 async function cargarAlumnos() {
     mostrarLoader(true);
     tablaBody.innerHTML = "";
-    const res = await fetch(`${API_BASE_URL}/api/alumnos`, {
-        headers: { 
-            "Authorization": `Bearer ${token}`,
-            "X-API-Key": SCODA_API_KEY 
-        }
-    });
+    const res = await fetch(`${API_BASE_URL}/api/alumnos`, { headers: getHeaders() });
     const data = await res.json();
+
     data.forEach(a => {
         const persona = a.persona_detalle || {};
         const curso = a.curso_detalle ? a.curso_detalle.nombre : "-";
@@ -74,6 +76,9 @@ async function cargarAlumnos() {
                 <td>${persona.nombres || ""} ${persona.apellido_uno || ""}</td>
                 <td>${curso}</td>
                 <td class="acciones">
+                    <button class="btn btn-outline-success btn-sm me-1" onclick="verDetalleAlumno(${a.id})">
+                        <i class="bi bi-eye"></i>
+                    </button>
                     <button class="btn btn-warning btn-sm me-1" onclick="abrirEditar(${a.id})">
                         <i class="bi bi-pencil-square"></i>
                     </button>
@@ -111,17 +116,17 @@ function crearBloqueHijo(index) {
 // =======================================
 // CREAR FAMILIA (APODERADO + HIJOS)
 // =======================================
-form.addEventListener("submit", async (e) => {
+formFamilia.addEventListener("submit", async (e) => {
     e.preventDefault();
     mostrarLoader(true);
 
     const apoderado = {
-        nombres: form.nombres_apoderado.value,
-        apellido_uno: form.apellido_uno_apoderado.value,
-        apellido_dos: form.apellido_dos_apoderado.value,
-        run: form.run_apoderado.value,
-        email: form.email_apoderado.value,
-        fono: form.fono_apoderado.value
+        nombres: formFamilia.nombres_apoderado.value,
+        apellido_uno: formFamilia.apellido_uno_apoderado.value,
+        apellido_dos: formFamilia.apellido_dos_apoderado.value,
+        run: formFamilia.run_apoderado.value,
+        email: formFamilia.email_apoderado.value,
+        fono: formFamilia.fono_apoderado.value
     };
 
     const alumnos = [];
@@ -135,15 +140,11 @@ form.addEventListener("submit", async (e) => {
         });
     });
 
-    const payload = { apoderado, alumnos, autorizado: form.autorizado.checked };
+    const payload = { apoderado, alumnos, autorizado: formFamilia.autorizado.checked };
 
     const res = await fetch(`${API_BASE_URL}/api/alumnos/crear-familia`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "X-API-Key": SCODA_API_KEY
-        },
+        headers: getHeaders(),
         body: JSON.stringify(payload)
     });
 
@@ -152,8 +153,8 @@ form.addEventListener("submit", async (e) => {
 
     if (res.ok) {
         mostrarNotificacion(result.mensaje || "Familia registrada con éxito.", "#28a745");
-        modal.style.display = "none";
-        form.reset();
+        modalFamilia.style.display = "none";
+        formFamilia.reset();
         contenedorHijos.innerHTML = "";
         await cargarAlumnos();
         crearBloqueHijo(0);
@@ -167,9 +168,7 @@ form.addEventListener("submit", async (e) => {
 // =======================================
 async function abrirEditar(id) {
     mostrarLoader(true);
-    const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, {
-        headers: { "Authorization": `Bearer ${token}`, "X-API-Key": SCODA_API_KEY }
-    });
+    const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, { headers: getHeaders() });
     const a = await res.json();
     mostrarLoader(false);
     const persona = a.persona_detalle;
@@ -193,11 +192,7 @@ formEditar.addEventListener("submit", async (e) => {
 
     const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, {
         method: "PATCH",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "X-API-Key": SCODA_API_KEY
-        },
+        headers: getHeaders(),
         body: JSON.stringify(payload)
     });
 
@@ -219,7 +214,7 @@ async function eliminarAlumno(id) {
     mostrarLoader(true);
     const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}`, "X-API-Key": SCODA_API_KEY }
+        headers: getHeaders()
     });
     mostrarLoader(false);
     if (res.ok) {
@@ -231,18 +226,119 @@ async function eliminarAlumno(id) {
 }
 
 // =======================================
+// VER DETALLE DE ALUMNO (ACTUALIZADO)
+// =======================================
+async function verDetalleAlumno(id) {
+    const modalDetalle = new bootstrap.Modal(document.getElementById("modalDetalleAlumno"));
+    const contenedor = document.getElementById("detalleAlumnoContainer");
+
+    contenedor.innerHTML = `
+        <div class="text-center text-muted py-4">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="mt-2 mb-0">Cargando información del alumno...</p>
+        </div>`;
+    modalDetalle.show();
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}/detalle`, { headers: getHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error al obtener detalle.");
+
+        alumnoSeleccionado = data;
+        const alumno = data.alumno;
+        const apoderados = data.apoderados || [];
+        const autorizados = data.autorizados || [];
+
+        contenedor.innerHTML = `
+            <div class="text-center mb-3">
+                <div class="rounded-circle bg-success text-white d-inline-flex justify-content-center align-items-center"
+                     style="width: 80px; height: 80px; font-size: 32px; font-weight: bold;">
+                    ${alumno.nombre.charAt(0)}${alumno.apellido.charAt(0)}
+                </div>
+                <h5 class="text-success fw-bold mt-3">${alumno.nombre} ${alumno.apellido}</h5>
+                <p><strong>RUN:</strong> ${alumno.run}</p>
+                <p><strong>Curso:</strong> ${alumno.curso || "—"}</p>
+                <p><strong>Establecimiento:</strong> ${alumno.establecimiento || "—"}</p>
+            </div>
+            <hr>
+
+            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-people-fill"></i> Apoderados</h6>
+            ${
+                apoderados.length
+                    ? `<ul class="list-group mb-3">
+                        ${apoderados.map(a => `
+                            <li class="list-group-item">
+                                <strong>${a.nombre}</strong> (${a.tipo_relacion})
+                                <br><small>RUN: ${a.run || "—"} | Tel: ${a.telefono || "—"} | ${a.correo || "—"}</small>
+                            </li>`).join("")}
+                      </ul>`
+                    : `<p class="text-muted">Sin apoderados registrados.</p>`
+            }
+
+            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-person-badge"></i> Autorizados a Retiro</h6>
+            ${
+                autorizados.length
+                    ? `<ul class="list-group">
+                        ${autorizados.map(a => `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${a.nombre}</strong> 
+                                    <span class="badge ${a.autorizado ? "bg-success" : "bg-danger"}">
+                                        ${a.autorizado ? "Autorizado" : "No autorizado"}
+                                    </span><br>
+                                    <small>${a.tipo_relacion || "—"} | Tel: ${a.telefono || "—"} | ${a.correo || "—"}</small>
+                                </div>
+                            </li>`).join("")}
+                      </ul>`
+                    : `<p class="text-muted">Sin personas autorizadas.</p>`
+            }
+        `;
+    } catch (error) {
+        contenedor.innerHTML = `<p class="text-danger text-center">Error al cargar detalle del alumno.</p>`;
+        console.error(error);
+    }
+}
+
+// =======================================
+// EXPORTAR CSV / PDF
+// =======================================
+btnExportCSV.addEventListener("click", () => {
+    if (!alumnoSeleccionado) return;
+    const { alumno, apoderados, autorizados } = alumnoSeleccionado;
+
+    let csv = `Alumno;RUN;Curso;Establecimiento\n${alumno.nombre} ${alumno.apellido};${alumno.run};${alumno.curso};${alumno.establecimiento}\n\nApoderados:\nNombre;RUN;Teléfono;Correo;Relación\n`;
+    (apoderados || []).forEach(a => {
+        csv += `${a.nombre};${a.run};${a.telefono};${a.correo};${a.tipo_relacion}\n`;
+    });
+
+    csv += `\nAutorizados:\nNombre;Relación;Teléfono;Correo;Estado\n`;
+    (autorizados || []).forEach(a => {
+        csv += `${a.nombre};${a.tipo_relacion};${a.telefono};${a.correo};${a.autorizado ? "Autorizado" : "No autorizado"}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `ficha_alumno_${alumno.run}.csv`;
+    link.click();
+});
+
+btnExportPDF.addEventListener("click", () => {
+    if (!alumnoSeleccionado) return;
+    window.print();
+});
+
+// =======================================
 // EVENTOS DE MODAL Y DASHBOARD
 // =======================================
 btnAgregarHijo.onclick = () => crearBloqueHijo(contenedorHijos.children.length);
-btnAbrir.onclick = () => modal.style.display = "flex";
-btnCerrar.onclick = () => modal.style.display = "none";
-btnCerrarEditar.onclick = () => modalEditar.style.display = "none";
+btnAbrir.onclick = () => (modalFamilia.style.display = "flex");
+btnCerrar.onclick = () => (modalFamilia.style.display = "none");
+btnCerrarEditar.onclick = () => (modalEditar.style.display = "none");
 window.onclick = e => {
-    if (e.target === modal) modal.style.display = "none";
+    if (e.target === modalFamilia) modalFamilia.style.display = "none";
     if (e.target === modalEditar) modalEditar.style.display = "none";
 };
-
-function volverDashboard() { window.location.href = "/panel/dashboard/"; }
 
 // =======================================
 // INICIALIZACIÓN

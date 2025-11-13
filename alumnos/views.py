@@ -14,7 +14,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasAPIKey]
 
     # ----------------------------------------------------------
-    # DETALLE DE ALUMNO (INCLUYE PERSONAS AUTORIZADAS)
+    # DETALLE COMPLETO DE ALUMNO (Apoderados + Autorizados)
     # ----------------------------------------------------------
     @action(detail=True, methods=['get'], url_path='detalle')
     def detalle_alumno(self, request, pk=None):
@@ -28,10 +28,29 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Personas autorizadas a retiro
-        autorizados = PersonaAutorizadaAlumno.objects.select_related('persona').filter(
-            alumno=alumno, autorizado=True
+        # 🔹 Apoderados vinculados
+        apoderados = PersonaAutorizadaAlumno.objects.select_related('persona').filter(
+            alumno_id=alumno.id, tipo_relacion__iexact='apoderado'
         )
+
+        data_apoderados = [
+            {
+                "id": a.persona.id,
+                "nombre": f"{a.persona.nombres} {a.persona.apellido_uno or ''} {a.persona.apellido_dos or ''}".strip(),
+                "run": a.persona.run,
+                "telefono": a.persona.fono or "",
+                "correo": a.persona.email or "",
+                "autorizado": a.autorizado,
+                "tipo_relacion": a.tipo_relacion
+            }
+            for a in apoderados
+        ]
+
+        # 🔹 Personas autorizadas (no apoderados)
+        autorizados = PersonaAutorizadaAlumno.objects.select_related('persona').filter(
+            alumno_id=alumno.id,
+            autorizado=True
+        ).exclude(tipo_relacion__iexact='apoderado')
 
         data_autorizados = [
             {
@@ -45,7 +64,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             for a in autorizados
         ]
 
-        # Datos principales del alumno
+        # 🔹 Datos principales del alumno
         data_alumno = {
             "id": alumno.id,
             "run": alumno.persona.run,
@@ -59,15 +78,18 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             ),
         }
 
-        # Respuesta final
-        return Response(
-            {
-                "alumno": data_alumno,
-                "contactos_autorizados": data_autorizados,
-                "total_autorizados": len(data_autorizados)
-            },
-            status=status.HTTP_200_OK
-        )
+        # 🔹 Respuesta final (compatible con el front actual)
+        data_response = {
+            "alumno": data_alumno,
+            "apoderados": data_apoderados,
+            "autorizados": data_autorizados,
+            "total_apoderados": len(data_apoderados),
+            "total_autorizados": len(data_autorizados),
+            # compatibilidad con versiones anteriores del front
+            "contactos_autorizados": data_autorizados
+        }
+
+        return Response(data_response, status=status.HTTP_200_OK)
 
     # ----------------------------------------------------------
     # CREAR FAMILIA COMPLETA (Apoderado + varios alumnos)
@@ -89,7 +111,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        #Crear o recuperar apoderado
+        # Crear o recuperar apoderado
         apoderado, _ = Persona.objects.get_or_create(
             run=apoderado_data.get('run'),
             defaults={
