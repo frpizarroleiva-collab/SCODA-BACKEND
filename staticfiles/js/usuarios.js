@@ -37,20 +37,17 @@ async function cargarUsuarios() {
         if (!res.ok) throw new Error(`Error ${res.status}`);
 
         const rawData = await res.json();
-        let data = Array.isArray(rawData) ? rawData : rawData.results || [];
-
-        // ORDENAR SIEMPRE POR ID ASCENDENTE
-        data.sort((a, b) => a.id - b.id);
+        const data = Array.isArray(rawData) ? rawData : rawData.results || [];
 
         const tbody = document.querySelector("#usuarios-table tbody");
         tbody.innerHTML = data
             .map(
                 (u, i) => `
             <tr>
-                <td>${i + 1}</td> <!-- Correlativo visual -->
+                <td>${i + 1}</td>
                 <td>${u.first_name || ""} ${u.last_name || ""}</td>
                 <td>${u.email}</td>
-                <td>${u.rol.toUpperCase()}</td>
+                <td>${u.rol}</td>
                 <td>${u.is_active ? "Sí" : "No"}</td>
                 <td>
                     <button class="btn btn-warning btn-sm me-1" onclick="editarUsuario('${u.email}')">
@@ -64,7 +61,7 @@ async function cargarUsuarios() {
             )
             .join("");
     } catch (err) {
-        console.error("Error al cargar usuarios:", err);
+        console.error("❌ Error al cargar usuarios:", err);
         alert("No se pudieron cargar los usuarios. Verifica token o API Key.");
     } finally {
         showLoader(false);
@@ -130,15 +127,15 @@ async function guardarUsuario(e) {
         }
 
         if (res.status === 204 || res.status === 200 || res.status === 201) {
-            alert("Usuario guardado correctamente.");
+            alert("✅ Usuario guardado correctamente.");
             modal.hide();
             await cargarUsuarios();
         } else if (!res.ok) {
-            console.error("Error de respuesta:", data);
+            console.error("❌ Error de respuesta:", data);
             throw new Error(data?.email?.[0] || data?.detail || `Error ${res.status}`);
         }
     } catch (err) {
-        console.error("Error general:", err);
+        console.error("⚠️ Error general:", err);
         alert(err.message || "No se pudo guardar el usuario.");
     } finally {
         showLoader(false);

@@ -10,28 +10,26 @@ class Persona(models.Model):
         null=True,
         related_name='persona'
     )
-    run = models.CharField(max_length=12, unique=True, blank=True, null=True)
+
+    run = models.CharField(
+        max_length=12,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
     nombres = models.CharField(max_length=120)
     apellido_uno = models.CharField(max_length=120)
     apellido_dos = models.CharField(max_length=120, blank=True, null=True)
-    fecha_nacimiento = models.DateField(blank=True, null=True)
-    email = models.EmailField(max_length=120, blank=True, null=True)
 
+    fecha_nacimiento = models.DateField(blank=True, null=True)
+
+    email = models.EmailField(max_length=120, blank=True, null=True)
     fono = models.CharField(max_length=20, blank=True, null=True)
-    comuna = models.ForeignKey(
-        'ubicacion.Comuna',
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        related_name='personas'
-    )
-    pais_nacionalidad = models.ForeignKey(
-        'ubicacion.Pais',
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True,
-        related_name='nacionales'
-    )
+
+    comuna = models.ForeignKey('ubicacion.Comuna',on_delete=models.SET_NULL, blank=True,null=True,related_name='personas')
+    pais_nacionalidad = models.ForeignKey('ubicacion.Pais',on_delete=models.SET_NULL,blank=True,null=True,related_name='nacionales')
+    direccion = models.CharField(max_length=255,blank=True,null=True)
 
     class Meta:
         db_table = 'persona'
@@ -56,6 +54,7 @@ class DocumentoIdentidad(models.Model):
     )
     tipo = models.CharField(max_length=40)
     identificador = models.CharField(max_length=64)
+
     pais_emisor = models.ForeignKey(
         'ubicacion.Pais',
         on_delete=models.SET_NULL,

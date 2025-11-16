@@ -1,12 +1,22 @@
 from rest_framework import serializers
 from .models import Curso
 from alumnos.models import Alumno
+from personas.models import Persona   # ← IMPORTANTE
+
+
 class CursoSerializer(serializers.ModelSerializer):
     profesor_nombre = serializers.SerializerMethodField(read_only=True)
     establecimiento_nombre = serializers.CharField(
         source='establecimiento.nombre', read_only=True
     )
     cantidad_alumnos = serializers.SerializerMethodField(read_only=True)
+
+    # Campo profesor filtrado SOLO A PROFESORES
+    profesor = serializers.PrimaryKeyRelatedField(
+        queryset=Persona.objects.filter(usuario__rol='PROFESOR'),
+        required=False,
+        allow_null=True
+    )
 
     # Nuevos campos: horarios del curso
     hora_inicio = serializers.TimeField(required=False)

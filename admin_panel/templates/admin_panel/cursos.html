@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{% static 'css/cursos.css' %}">
 
     <style>
-        /* 🔹 Ajuste de encabezado común */
+        /*Ajuste de encabezado común */
         header.bg-success h4, header.bg-success .fw-bold {
             color: #fff !important;
         }
@@ -34,7 +34,7 @@
 </head>
 <body>
 
-    <!-- ✅ Encabezado principal -->
+    <!--Encabezado principal -->
     <header class="bg-success text-white d-flex justify-content-between align-items-center px-4 py-3 shadow-sm">
         <h4 class="m-0 fw-bold">Gestión de Cursos</h4>
         <button class="btn btn-light btn-sm fw-semibold" onclick="volverDashboard()">
@@ -42,7 +42,7 @@
         </button>
     </header>
 
-    <!-- ✅ Contenido principal -->
+    <!--Contenido principal -->
     <main class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="text-success fw-bold mb-0">Listado de Cursos</h5>
@@ -69,16 +69,16 @@
             </table>
         </div>
 
-        <!-- 🔹 Modal Crear/Editar -->
+        <!--Modal Crear/Editar -->
         {% include "admin_panel/includes/cursos_modal.html" %}
-        <!-- 🔹 Modal Ver alumnos -->
+        <!-- Modal Ver alumnos -->
         {% include "admin_panel/includes/cursos_alumnos_modal.html" %}
     </main>
 
-    <!-- ✅ Footer común -->
+    <!--Footer común -->
     {% include "admin_panel/includes/footer.html" %}
 
-    <!-- ✅ Notificación y Loader -->
+    <!--Notificación y Loader -->
     <div id="notificacion"></div>
     <div id="loader">
         <div class="spinner-border text-success" role="status"></div> Cargando...
@@ -97,6 +97,7 @@
             window.location.href = "/panel/dashboard/";
         }
     </script>
-    <script src="{% static 'js/cursos.js' %}"></script>
+    {% now "U" as timestamp %}
+    <script src="{% static 'js/cursos.js' %}?v={{ timestamp }}"></script>
 </body>
 </html>

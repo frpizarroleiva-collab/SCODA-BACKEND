@@ -12,6 +12,7 @@ from alumnos.models import Alumno
 from estados.models import EstadoAlumno
 
 
+
 class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CursoSerializer
@@ -174,3 +175,4 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
         except Curso.DoesNotExist:
             return Response({"error": "Curso no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+

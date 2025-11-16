@@ -46,10 +46,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Terceros
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+
+    # Apps locales
     'escuela',
     'personas',
     'alumnos',
@@ -67,7 +71,7 @@ INSTALLED_APPS = [
 # ===============================================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Para servir estáticos
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -105,7 +109,8 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),  #ruta para reset_password_form.html
+            os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'admin_panel', 'templates'),  # 💚 ahora sí
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -121,7 +126,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'scoda.wsgi.application'
 
 # ===============================================================
-# BASE DE DATOS (LOCAL o REMOTA)
+# BASE DE DATOS
 # ===============================================================
 DB_ENV = env("DB_ENV", default="local")
 
@@ -168,33 +173,46 @@ USE_I18N = True
 USE_TZ = True
 
 # ===============================================================
-# STATIC FILES
+# STATIC FILES — CONFIGURACIÓN FINAL
 # ===============================================================
 STATIC_URL = "/static/"
+
+# ← Carpeta donde tú editas JS/CSS del admin panel
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "admin_panel", "static"),
+]
+
+# ← Carpeta generada por collectstatic
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+# Whitenoise para producción
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# Necesario para que Whitenoise encuentre archivos en STATICFILES_DIRS
+WHITENOISE_USE_FINDERS = True
+
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
 # ===============================================================
-# CONFIGURACIONES PERSONALIZADAS SCODA
+# CONFIG SCODA
 # ===============================================================
 AUTH_USER_MODEL = "accounts.Usuario"
 
-# Backend local por defecto
 BACKEND_URL = env("BACKEND_URL", default="http://127.0.0.1:8000")
 
-# Duración del token de restablecimiento de contraseña (24 h)
-PASSWORD_RESET_TIMEOUT = 60 * 60 * 24  # 24 horas
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24
 
-#URL base usada en el enlace del correo (cambia en producción)
 FRONTEND_URL = env(
     "FRONTEND_URL",
     default="http://localhost:8000/api/usuarios"
 )
-LOGIN_URL = '/panel/'  # dónde redirigir si no está autenticado
 
-SCODA_API_KEY = env('SCODA_API_KEY')
+LOGIN_URL = '/panel/'
 
 API_BASE_URL = env(
     "API_BASE_URL",
-    default="http://127.0.0.1:8000"  # URL del backend local por defecto
+    default="http://127.0.0.1:8000"
 )

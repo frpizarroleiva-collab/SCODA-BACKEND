@@ -1,3 +1,4 @@
+<!-- PRUEBA #1 -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -90,7 +91,8 @@
     </script>
 
     <!-- JS de Alumnos -->
-    <script src="{% static 'js/alumnos.js' %}"></script>
+    {% now "U" as timestamp %}
+    <script src="{% static 'js/alumnos.js' %}?v={{ timestamp }}"></script>
 
 </body>
 </html>

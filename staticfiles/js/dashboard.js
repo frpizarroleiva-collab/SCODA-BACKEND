@@ -1,3 +1,6 @@
+console.log("DASHBOARD JS CARGADO VERSION X");
+
+
 // ======================================
 // DASHBOARD.JS — SCODA (VERSIÓN FINAL CON LOADER)
 // ======================================
@@ -126,14 +129,12 @@ document.addEventListener("DOMContentLoaded", () => {
             retiros: "lista-retiros",
             ausentes: "lista-ausentes",
             extension: "lista-extension",
-            anticipados: "lista-anticipados"
         };
 
         const urls = {
             retiros: `${BASE}/api/estado-alumnos/retiros${q}`,
             ausentes: `${BASE}/api/estado-alumnos/ausentes${q}`,
             extension: `${BASE}/api/estado-alumnos/extension${q}`,
-            anticipados: `${BASE}/api/estado-alumnos/retiros-anticipados${q}`,
         };
 
         for (let tipo in urls) {
@@ -142,8 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await res.json();
 
                 const lista = document.getElementById(zonas[tipo]);
-                if (!lista) continue;
-
                 lista.innerHTML = "";
 
                 (data.alumnos || []).slice(0, 5).forEach(item => {

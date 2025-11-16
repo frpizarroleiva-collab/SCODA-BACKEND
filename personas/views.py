@@ -14,9 +14,21 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = Persona.objects.all()
     serializer_class = PersonaSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
-
     # ----------------------------------------------------------
-    # VALIDAR RUN (solo consulta, sin crear retiros)
+    # LISTAR SOLO PROFESORES
+    # ----------------------------------------------------------
+    @action(
+        detail=False,
+        methods=['get'],
+        url_path='profesores',
+        permission_classes=[IsAuthenticated, HasAPIKey]
+    )
+    def listar_profesores(self, request):
+        profesores = Persona.objects.filter(usuario__rol='profesor')
+        serializer = self.get_serializer(profesores, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    # ----------------------------------------------------------
+    # VALIDAR RUN (consulta sin generar retiros)
     # ----------------------------------------------------------
     @action(
         detail=False,
@@ -57,6 +69,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             ).select_related('alumno__persona', 'alumno__curso')
 
             alumnos = [rel.alumno for rel in apoderados_qs]
+
             alumnos_data = [
                 {
                     "id_alumno": a.id,
@@ -68,6 +81,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 }
                 for a in alumnos
             ]
+
             autorizaciones_data = [
                 {
                     "id_relacion": rel.id,
@@ -80,9 +94,13 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 }
                 for rel in apoderados_qs
             ]
+
             es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in apoderados_qs)
             es_autorizado = any(rel.autorizado for rel in apoderados_qs)
-            mensaje_autorizado = "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
+
+            mensaje_autorizado = (
+                "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
+            )
 
             # ----------------------------------------------------------
             # AUDITORÍA DE CONSULTA EXITOSA
@@ -95,17 +113,36 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             )
 
             # ----------------------------------------------------------
-            # RESPUESTA FINAL
+            # RESPUESTA FINAL — CON CAMPOS EXTENDIDOS
             # ----------------------------------------------------------
             return Response({
                 "existe": True,
                 "persona": serializer.data,
                 "persona_id": persona.id,
+
+                #NUEVOS CAMPOS APORTADOS POR EL MODELO PERSONA
+                "fono": persona.fono or "",
+                "email": persona.email or "",
+                "fecha_nacimiento": persona.fecha_nacimiento,
+                "direccion": persona.direccion or "",
+                "comuna_id": persona.comuna_id,
+                "comuna_nombre": persona.comuna.nombre if persona.comuna else None,
+                "pais_nacionalidad_id": persona.pais_nacionalidad_id,
+                "pais_nacionalidad_nombre": (
+                    persona.pais_nacionalidad.nombre 
+                    if persona.pais_nacionalidad 
+                    else None
+                ),
+
+                #AUTORIZACIONES RELACIONADAS
                 "es_apoderado": es_apoderado,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
+
+                #LISTADO DE ALUMNOS RELACIONADOS
                 "alumnos_asociados": alumnos_data,
                 "alumnos_autorizados": autorizaciones_data,
+
                 "mensaje": "Validación exitosa. Seleccione al alumno que desea retirar."
             }, status=status.HTTP_200_OK)
 

@@ -42,7 +42,7 @@ function notificar(mensaje, tipo = "success") {
 async function cargarSelects() {
     try {
         const [profRes, estRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/personas/profesores`, { headers: getHeaders() }),
+            fetch(`${API_BASE_URL}/api/personas`, { headers: getHeaders() }),
             fetch(`${API_BASE_URL}/api/establecimientos`, { headers: getHeaders() }),
         ]);
 
@@ -53,7 +53,6 @@ async function cargarSelects() {
         const estSelect = document.getElementById("establecimiento");
 
         profesorSelect.innerHTML = `<option value="">Sin profesor asignado</option>`;
-
         profesores.forEach((p) => {
             profesorSelect.innerHTML += `<option value="${p.id}">${p.nombres} ${p.apellido_uno}</option>`;
         });

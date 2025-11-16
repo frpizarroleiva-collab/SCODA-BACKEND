@@ -27,6 +27,14 @@ const loader = document.getElementById("loader");
 const btnExportCSV = document.getElementById("btnExportCSV");
 const btnExportPDF = document.getElementById("btnExportPDF");
 
+// Selects para apoderado principal
+const selectPais = formFamilia.querySelector("select[name='pais_apoderado']");
+const selectRegion = formFamilia.querySelector("select[name='region_apoderado']");
+const selectComuna = formFamilia.querySelector("select[name='comuna_apoderado']");
+
+let paisesCache = [];
+let regionesCache = [];
+let comunasCache = [];
 let cursosCache = [];
 let alumnoSeleccionado = null;
 
@@ -44,7 +52,7 @@ function escapeHTML(text) {
 }
 
 function safe(v) {
-    return v === undefined || v === null ? "" : v;
+    return v == null ? "" : v;
 }
 
 function mostrarNotificacion(mensaje, color = "#007BFF") {
@@ -67,6 +75,47 @@ function getHeaders() {
 }
 
 // =======================================
+// CARGA: PAÍSES – REGIONES – COMUNAS
+// =======================================
+async function cargarPaises() {
+    const res = await fetch(`${API_BASE_URL}/api/paises`, { headers: getHeaders() });
+    paisesCache = await res.json();
+
+    selectPais.innerHTML = `<option value="">Seleccione...</option>` +
+        paisesCache.map(p => `<option value="${p.id}">${escapeHTML(p.nombre)}</option>`).join("");
+}
+
+async function cargarRegiones() {
+    const res = await fetch(`${API_BASE_URL}/api/regiones`, { headers: getHeaders() });
+    regionesCache = await res.json();
+}
+
+async function cargarComunas() {
+    const res = await fetch(`${API_BASE_URL}/api/comunas`, { headers: getHeaders() });
+    comunasCache = await res.json();
+}
+
+selectPais.addEventListener("change", () => {
+    const paisID = selectPais.value;
+
+    const regiones = regionesCache.filter(r => r.pais === parseInt(paisID));
+    selectRegion.innerHTML =
+        `<option value="">Seleccione...</option>` +
+        regiones.map(r => `<option value="${r.id}">${escapeHTML(r.nombre)}</option>`).join("");
+
+    selectComuna.innerHTML = `<option value="">Seleccione región primero</option>`;
+});
+
+selectRegion.addEventListener("change", () => {
+    const regionID = selectRegion.value;
+
+    const comunas = comunasCache.filter(c => c.region === parseInt(regionID));
+    selectComuna.innerHTML =
+        `<option value="">Seleccione...</option>` +
+        comunas.map(c => `<option value="${c.id}">${escapeHTML(c.nombre)}</option>`).join("");
+});
+
+// =======================================
 // CARGAR CURSOS
 // =======================================
 async function cargarCursos() {
@@ -77,45 +126,67 @@ async function cargarCursos() {
 }
 
 // =======================================
-// CARGAR ALUMNOS
+// LISTAR ALUMNOS
+// =======================================
+// =======================================
+// LISTAR ALUMNOS (ORDEN + CORRELATIVO)
 // =======================================
 async function cargarAlumnos() {
     mostrarLoader(true);
     tablaBody.innerHTML = "";
 
     const res = await fetch(`${API_BASE_URL}/api/alumnos`, { headers: getHeaders() });
-    const data = await res.json();
+    let data = await res.json();
 
-    data.forEach(a => {
-        const persona = a.persona_detalle || {};
-        const curso = a.curso_detalle?.nombre || "-";
+    // 🔥 ORDENAR SIEMPRE POR ID ASCENDENTE
+    data.sort((a, b) => a.id - b.id);
 
-        tablaBody.innerHTML += `
-            <tr>
-                <td>${escapeHTML(a.id)}</td>
-                <td>${escapeHTML(persona.run || "-")}</td>
-                <td>${escapeHTML(`${safe(persona.nombres)} ${safe(persona.apellido_uno)}`)}</td>
-                <td>${escapeHTML(curso)}</td>
-                <td class="acciones">
-                    <button class="btn btn-outline-success btn-sm me-1" onclick="verDetalleAlumno(${a.id})">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-warning btn-sm me-1" onclick="abrirEditar(${a.id})">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="eliminarAlumno(${a.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>`;
-    });
+    tablaBody.innerHTML = data
+        .map((a, index) => {
+            const persona = a.persona_detalle || {};
+            const curso = a.curso_detalle?.nombre || "-";
+            
+            return `
+                <tr>
+                    <td>${index + 1}</td>   <!-- CORRELATIVO -->
+                    <td>${escapeHTML(persona.run || "-")}</td>
+                    <td>${escapeHTML(`${safe(persona.nombres)} ${safe(persona.apellido_uno)}`)}</td>
+                    <td>${escapeHTML(curso)}</td>
+
+                    <td class="acciones">
+                        <button class="btn btn-outline-success btn-sm me-1" onclick="verDetalleAlumno(${a.id})">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm me-1" onclick="abrirEditar(${a.id})">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarAlumno(${a.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        })
+        .join("");
 
     mostrarLoader(false);
 }
 
+
 // =======================================
-// APODERADO EXTRA
+// BLOQUES: APODERADOS EXTRA (CON LABEL)
 // =======================================
+const opcionesParentesco = `
+    <option value="Padre">Padre</option>
+    <option value="Madre">Madre</option>
+    <option value="Abuelo">Abuelo</option>
+    <option value="Abuela">Abuela</option>
+    <option value="Tío">Tío</option>
+    <option value="Tía">Tía</option>
+    <option value="Hermano">Hermano</option>
+    <option value="Hermana">Hermana</option>
+    <option value="Otro">Otro</option>
+`;
+
 function crearBloqueApoderadoExtra() {
     if (contenedorApoderadosExtra.children.length >= 2) {
         mostrarNotificacion("Máximo 2 apoderados adicionales.", "#dc3545");
@@ -123,49 +194,49 @@ function crearBloqueApoderadoExtra() {
     }
 
     const div = document.createElement("div");
-    div.classList.add("border", "rounded", "p-2", "mb-2");
+    div.classList.add("bloque-apoderado-extra");
 
     div.innerHTML = `
-        <h6 class="fw-bold">Apoderado adicional</h6>
-
+        <h6 class="fw-bold text-success">Apoderado adicional</h6>
         <div class="row g-2">
+
             <div class="col-md-4">
-                <input type="text" class="form-control nombre_extra" placeholder="Nombres" required>
+                <label class="fw-semibold">Nombres</label>
+                <input class="form-control nombre_extra">
             </div>
 
             <div class="col-md-4">
-                <input type="text" class="form-control apellido_uno_extra" placeholder="Apellido Paterno" required>
+                <label class="fw-semibold">Apellido paterno</label>
+                <input class="form-control apellido_uno_extra">
             </div>
 
             <div class="col-md-4">
-                <input type="text" class="form-control apellido_dos_extra" placeholder="Apellido Materno">
+                <label class="fw-semibold">Apellido materno</label>
+                <input class="form-control apellido_dos_extra">
             </div>
 
             <div class="col-md-4">
-                <input type="text" class="form-control run_extra" placeholder="RUN" required>
+                <label class="fw-semibold">RUN</label>
+                <input class="form-control run_extra">
             </div>
 
             <div class="col-md-4">
-                <select class="form-select parentesco_extra" required>
-                    <option value="Padre">Padre</option>
-                    <option value="Madre">Madre</option>
-                    <option value="Abuelo">Abuelo</option>
-                    <option value="Abuela">Abuela</option>
-                    <option value="Tío">Tío</option>
-                    <option value="Tía">Tía</option>
-                    <option value="Otro">Otro</option>
+                <label class="fw-semibold">Parentesco</label>
+                <select class="form-select parentesco_extra">
+                    ${opcionesParentesco}
                 </select>
             </div>
 
-            <div class="col-md-2 d-flex align-items-center">
-                <input type="checkbox" class="form-check-input autorizado_extra" checked> Autorizado
+            <div class="col-md-3 d-flex align-items-end">
+                <label><input type="checkbox" class="autorizado_extra" checked> Autorizado</label>
             </div>
 
-            <div class="col-md-2 d-flex align-items-center">
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('div.border').remove()">
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-danger btn-sm delete" onclick="this.closest('.bloque-apoderado-extra').remove()">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
+
         </div>
     `;
 
@@ -173,42 +244,55 @@ function crearBloqueApoderadoExtra() {
 }
 
 // =======================================
-// AÑADIR HIJO
+// BLOQUES: HIJOS (FECHA ALINEADA)
 // =======================================
 function crearBloqueHijo() {
     const div = document.createElement("div");
-    div.classList.add("border", "rounded", "p-2", "mb-2");
+    div.classList.add("bloque-hijo");
 
     div.innerHTML = `
-        <h6 class="fw-bold">Hijo</h6>
-
+        <h6 class="fw-bold text-success">Hijo</h6>
         <div class="row g-2">
+
             <div class="col-md-4">
-                <input type="text" class="form-control nombre_hijo" placeholder="Nombres" required>
-            </div>
-            <div class="col-md-4">
-                <input type="text" class="form-control apellido_uno_hijo" placeholder="Apellido Paterno" required>
-            </div>
-            <div class="col-md-4">
-                <input type="text" class="form-control apellido_dos_hijo" placeholder="Apellido Materno">
+                <label class="fw-semibold">Nombres</label>
+                <input class="form-control nombre_hijo">
             </div>
 
             <div class="col-md-4">
-                <input type="text" class="form-control run_hijo" placeholder="RUN" required>
+                <label class="fw-semibold">Apellido paterno</label>
+                <input class="form-control apellido_uno_hijo">
             </div>
 
-            <div class="col-md-6">
-                <select class="form-select curso_hijo" required>
-                    <option value="">Seleccione curso...</option>
+            <div class="col-md-4">
+                <label class="fw-semibold">Apellido materno</label>
+                <input class="form-control apellido_dos_hijo">
+            </div>
+
+            <div class="col-md-4">
+                <label class="fw-semibold">RUN</label>
+                <input class="form-control run_hijo">
+            </div>
+
+            <div class="col-md-4">
+                <label class="fw-semibold">Fecha nacimiento</label>
+                <input type="date" class="form-control fecha_nac_hijo">
+            </div>
+
+            <div class="col-md-4">
+                <label class="fw-semibold">Curso</label>
+                <select class="form-select curso_hijo">
+                    <option value="">Seleccione...</option>
                     ${cursosCache.map(c => `<option value="${c.id}">${escapeHTML(c.nombre)}</option>`).join("")}
                 </select>
             </div>
 
-            <div class="col-md-2 d-flex align-items-center">
-                <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('div.border').remove()">
-                    <i class="bi bi-trash"></i>
+            <div class="col-md-12 d-flex justify-content-end mt-2">
+                <button type="button" class="btn btn-danger btn-sm delete" onclick="this.closest('.bloque-hijo').remove()">
+                    <i class="bi bi-trash"></i> Quitar hijo
                 </button>
             </div>
+
         </div>
     `;
 
@@ -216,13 +300,12 @@ function crearBloqueHijo() {
 }
 
 // =======================================
-// CREAR FAMILIA (CORREGIDO 100%)
+// CREAR FAMILIA COMPLETA
 // =======================================
 formFamilia.addEventListener("submit", async e => {
     e.preventDefault();
     mostrarLoader(true);
 
-    // --- Apoderado principal ---
     const apoderadoPrincipal = {
         nombres: formFamilia.nombres_apoderado.value,
         apellido_uno: formFamilia.apellido_uno_apoderado.value,
@@ -230,13 +313,17 @@ formFamilia.addEventListener("submit", async e => {
         run: formFamilia.run_apoderado.value,
         email: formFamilia.email_apoderado.value,
         fono: formFamilia.fono_apoderado.value,
+        pais_nacionalidad_id: formFamilia.pais_apoderado.value,
+        region_id: formFamilia.region_apoderado.value,
+        comuna_id: formFamilia.comuna_apoderado.value,
+        direccion: formFamilia.direccion_apoderado.value,
+        fecha_nacimiento: formFamilia.fecha_nac_apoderado.value || null,
         parentesco: formFamilia.parentesco_apoderado.value,
         autorizado: formFamilia.autorizado.checked
     };
 
-    // --- Apoderados extra ---
     const apoderadosExtra = [];
-    contenedorApoderadosExtra.querySelectorAll(".border").forEach(div => {
+    contenedorApoderadosExtra.querySelectorAll(".bloque-apoderado-extra").forEach(div => {
         apoderadosExtra.push({
             nombres: div.querySelector(".nombre_extra").value,
             apellido_uno: div.querySelector(".apellido_uno_extra").value,
@@ -244,31 +331,37 @@ formFamilia.addEventListener("submit", async e => {
             run: div.querySelector(".run_extra").value,
             parentesco: div.querySelector(".parentesco_extra").value,
             autorizado: div.querySelector(".autorizado_extra").checked,
-            email: "",
-            fono: ""
+
+            direccion: apoderadoPrincipal.direccion,
+            region_id: apoderadoPrincipal.region_id,
+            comuna_id: apoderadoPrincipal.comuna_id,
+            pais_nacionalidad_id: apoderadoPrincipal.pais_nacionalidad_id,
+            fecha_nacimiento: null
         });
     });
 
-    // --- Hijos ---
     const alumnos = [];
-    contenedorHijos.querySelectorAll(".border").forEach(div => {
+    contenedorHijos.querySelectorAll(".bloque-hijo").forEach(div => {
         alumnos.push({
             nombres: div.querySelector(".nombre_hijo").value,
             apellido_uno: div.querySelector(".apellido_uno_hijo").value,
             apellido_dos: div.querySelector(".apellido_dos_hijo").value,
             run: div.querySelector(".run_hijo").value,
+            fecha_nacimiento: div.querySelector(".fecha_nac_hijo").value || null,
+            direccion: apoderadoPrincipal.direccion,
+            comuna_id: apoderadoPrincipal.comuna_id,
+            region_id: apoderadoPrincipal.region_id,
+            pais_nacionalidad_id: apoderadoPrincipal.pais_nacionalidad_id,
             curso_id: div.querySelector(".curso_hijo").value
         });
     });
 
-    // --- Payload corregido ---
     const payload = {
         apoderado_principal: apoderadoPrincipal,
         apoderados_extras: apoderadosExtra,
         alumnos
     };
 
-    // --- URL corregida ---
     const res = await fetch(`${API_BASE_URL}/api/alumnos/crear-familia`, {
         method: "POST",
         headers: getHeaders(),
@@ -276,27 +369,26 @@ formFamilia.addEventListener("submit", async e => {
     });
 
     mostrarLoader(false);
+
     const json = await res.json();
 
     if (!res.ok) {
-        mostrarNotificacion(json.error || "Error al crear familia.", "#dc3545");
+        mostrarNotificacion(json.error || "Error al crear familia", "#dc3545");
         return;
     }
 
-    mostrarNotificacion("Familia registrada con éxito.", "#28a745");
+    mostrarNotificacion("Familia registrada correctamente", "#28a745");
 
     formFamilia.reset();
-    contenedorHijos.innerHTML = "";
     contenedorApoderadosExtra.innerHTML = "";
-
+    contenedorHijos.innerHTML = "";
     crearBloqueHijo();
-
     modalFamilia.hide();
     cargarAlumnos();
 });
 
 // =======================================
-// EDITAR ALUMNO
+// EDITAR ALUMNO (PATCH REAL)
 // =======================================
 async function abrirEditar(id) {
     mostrarLoader(true);
@@ -311,10 +403,12 @@ async function abrirEditar(id) {
     formEditar.apellido_uno.value = safe(persona.apellido_uno);
     formEditar.apellido_dos.value = safe(persona.apellido_dos);
     formEditar.run.value = persona.run;
+    formEditar.fecha_nacimiento.value = persona.fecha_nacimiento || "";
 
-    formEditar.curso_id.innerHTML = cursosCache.map(c =>
-        `<option value="${c.id}" ${a.curso_detalle && c.id == a.curso_detalle.id ? "selected" : ""}>${escapeHTML(c.nombre)}</option>`
-    ).join("");
+    formEditar.curso_id.innerHTML =
+        cursosCache.map(c =>
+            `<option value="${c.id}" ${a.curso_detalle && c.id == a.curso_detalle.id ? "selected" : ""}>${escapeHTML(c.nombre)}</option>`
+        ).join("");
 
     modalEditar.show();
 }
@@ -324,7 +418,16 @@ formEditar.addEventListener("submit", async e => {
     mostrarLoader(true);
 
     const id = formEditar.id.value;
-    const payload = { curso: formEditar.curso_id.value };
+
+    const payload = {};
+
+    if (formEditar.nombres.value.trim() !== "") payload.nombres = formEditar.nombres.value;
+    if (formEditar.apellido_uno.value.trim() !== "") payload.apellido_uno = formEditar.apellido_uno.value;
+    payload.apellido_dos = formEditar.apellido_dos.value;
+
+    payload.run = formEditar.run.value;
+    payload.curso_id = formEditar.curso_id.value;
+    payload.fecha_nacimiento = formEditar.fecha_nacimiento.value || null;
 
     const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, {
         method: "PATCH",
@@ -334,143 +437,121 @@ formEditar.addEventListener("submit", async e => {
 
     mostrarLoader(false);
 
-    if (res.ok) {
-        mostrarNotificacion("Alumno actualizado correctamente.", "#28a745");
-        modalEditar.hide();
-        cargarAlumnos();
-    } else {
-        mostrarNotificacion("Error al actualizar alumno.", "#dc3545");
+    if (!res.ok) {
+        mostrarNotificacion("Error al actualizar alumno", "#dc3545");
+        return;
     }
+
+    mostrarNotificacion("Alumno actualizado correctamente", "#28a745");
+    modalEditar.hide();
+    cargarAlumnos();
 });
 
 // =======================================
-// ELIMINAR ALUMNO
+// ELIMINAR
 // =======================================
 async function eliminarAlumno(id) {
-    if (!confirm("¿Seguro que deseas eliminar este alumno?")) return;
+    if (!confirm("¿Eliminar alumno? Esta acción no se puede deshacer.")) return;
 
     mostrarLoader(true);
+
     const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, {
         method: "DELETE",
         headers: getHeaders()
     });
+
     mostrarLoader(false);
 
-    if (res.ok) {
-        mostrarNotificacion("Alumno eliminado correctamente.", "#28a745");
-        cargarAlumnos();
-    } else {
-        mostrarNotificacion("Error al eliminar alumno.", "#dc3545");
+    if (!res.ok) {
+        mostrarNotificacion("Error al eliminar alumno", "#dc3545");
+        return;
     }
+
+    mostrarNotificacion("Alumno eliminado", "#28a745");
+    cargarAlumnos();
 }
 
 // =======================================
-// VER DETALLE
+// DETALLE ALUMNO (MODAL)
 // =======================================
 async function verDetalleAlumno(id) {
     const contenedor = document.getElementById("detalleAlumnoContainer");
 
     contenedor.innerHTML = `
-        <div class="text-center text-muted py-4">
+        <div class="text-center py-4">
             <div class="spinner-border text-success"></div>
-            <p class="mt-2 mb-0">Cargando información del alumno...</p>
+            <p class="mt-2">Cargando información...</p>
         </div>
     `;
 
     modalDetalle.show();
 
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}/detalle`, { headers: getHeaders() });
-        const data = await res.json();
+    const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}/detalle`, { headers: getHeaders() });
+    const data = await res.json();
 
-        if (!res.ok) throw new Error();
+    if (!res.ok) {
+        contenedor.innerHTML = `<p class="text-danger text-center">Error al cargar</p>`;
+        return;
+    }
 
-        alumnoSeleccionado = data;
+    alumnoSeleccionado = data;
 
-        const alumno = data.alumno;
-        const apoderados = data.apoderados || [];
-        const autorizados = data.autorizados || [];
+    const alumno = data.alumno;
+    const apoderados = data.apoderados ?? [];
+    const autorizados = data.autorizados ?? [];
 
-        const inicialNombre = escapeHTML(alumno.nombre.charAt(0) || "");
-        const inicialApellido = escapeHTML(alumno.apellido.charAt(0) || "");
-
-        contenedor.innerHTML = `
-            <div class="text-center mb-3">
-                <div class="rounded-circle bg-success text-white d-inline-flex justify-content-center align-items-center"
-                     style="width: 80px; height: 80px; font-size: 32px; font-weight: bold;">
-                    ${inicialNombre}${inicialApellido}
-                </div>
-
-                <h4 class="text-success fw-bold mt-3">
-                    ${escapeHTML(alumno.nombre)} ${escapeHTML(alumno.apellido)}
-                </h4>
-
-                <p><strong>RUN:</strong> ${escapeHTML(alumno.run)}</p>
-                <p><strong>Curso:</strong> ${escapeHTML(alumno.curso || "—")}</p>
-                <p><strong>Establecimiento:</strong> ${escapeHTML(alumno.establecimiento || "—")}</p>
+    contenedor.innerHTML = `
+        <div class="text-center mb-3">
+            <div class="rounded-circle bg-success text-white d-inline-flex justify-content-center align-items-center"
+                 style="width:80px;height:80px;font-size:32px;font-weight:bold;">
+                ${escapeHTML(alumno.nombre.charAt(0) || "")}${escapeHTML(alumno.apellido.charAt(0) || "")}
             </div>
 
-            <hr>
+            <h4 class="text-success fw-bold mt-3">${alumno.nombre} ${alumno.apellido}</h4>
 
-            <h6 class="fw-bold text-primary">
-                <i class="bi bi-people-fill"></i> Apoderados
-            </h6>
+            <p><strong>RUN:</strong> ${alumno.run}</p>
+            <p><strong>Curso:</strong> ${alumno.curso || "—"}</p>
+            <p><strong>Establecimiento:</strong> ${alumno.establecimiento || "—"}</p>
+        </div>
 
-            ${
-                apoderados.length
-                ? `
-                    <ul class="list-group mb-3">
-                        ${apoderados.map(a => `
-                            <li class="list-group-item">
-                                <strong>${escapeHTML(a.nombre)}</strong>
-                                <span class="badge bg-info ms-2">${escapeHTML(a.parentesco)}</span>
-                                <br>
-                                <small>
-                                    RUN: ${escapeHTML(a.run || "—")} |
-                                    Tel: ${escapeHTML(a.telefono || "—")} |
-                                    ${escapeHTML(a.correo || "—")}
-                                </small>
-                            </li>
-                        `).join("")}
-                    </ul>
-                `
-                : `<p class="text-muted">Sin apoderados registrados.</p>`
-            }
+        <hr>
 
-            <h6 class="fw-bold text-primary">
-                <i class="bi bi-person-badge"></i> Personas Autorizadas
-            </h6>
+        <h6 class="fw-bold text-primary">Apoderados</h6>
+        ${
+            apoderados.length
+                ? `<ul class="list-group mb-3">
+                    ${apoderados.map(a => `
+                        <li class="list-group-item">
+                            <strong>${a.nombre}</strong>
+                            <span class="badge bg-info ms-2">${a.parentesco}</span><br>
+                            <small>RUN: ${a.run} | Tel: ${a.telefono || "—"} | ${a.correo || "—"}</small>
+                        </li>
+                    `).join("")}
+                </ul>`
+                : `<p class="text-muted">Sin apoderados registrados</p>`
+        }
 
-            ${
-                autorizados.length
-                ? `
-                    <ul class="list-group">
-                        ${autorizados.map(a => `
-                            <li class="list-group-item">
-                                <strong>${escapeHTML(a.nombre)}</strong>
-                                <span class="badge ${a.autorizado ? "bg-success" : "bg-danger"} ms-2">
-                                    ${a.autorizado ? "Autorizado" : "No autorizado"}
-                                </span>
-                                <br>
-                                <small>
-                                    ${escapeHTML(a.parentesco || "—")} |
-                                    Tel: ${escapeHTML(a.telefono || "—")} |
-                                    ${escapeHTML(a.correo || "—")}
-                                </small>
-                            </li>
-                        `).join("")}
-                    </ul>
-                `
-                : `<p class="text-muted">Sin personas autorizadas.</p>`
-            }
-        `;
-    } catch (err) {
-        contenedor.innerHTML = `<p class="text-danger text-center">Error al cargar detalle del alumno.</p>`;
-    }
+        <h6 class="fw-bold text-primary">Personas Autorizadas</h6>
+        ${
+            autorizados.length
+                ? `<ul class="list-group">
+                    ${autorizados.map(a => `
+                        <li class="list-group-item">
+                            <strong>${a.nombre}</strong>
+                            <span class="badge ${a.autorizado ? "bg-success" : "bg-danger"} ms-2">
+                                ${a.autorizado ? "Autorizado" : "No autorizado"}
+                            </span><br>
+                            <small>${a.parentesco || "—"} | Tel: ${a.telefono || "—"} | ${a.correo || "—"}</small>
+                        </li>
+                    `).join("")}
+                </ul>`
+                : `<p class="text-muted">Sin personas autorizadas</p>`
+        }
+    `;
 }
 
 // =======================================
-// EXPORTAR CSV Y PDF
+// EXPORTAR CSV
 // =======================================
 btnExportCSV.onclick = () => {
     if (!alumnoSeleccionado) return;
@@ -505,6 +586,9 @@ Nombre;Parentesco;Teléfono;Correo;Estado
     link.click();
 };
 
+// =======================================
+// PDF (PRINT)
+// =======================================
 btnExportPDF.onclick = () => {
     if (!alumnoSeleccionado) return;
     window.print();
@@ -521,6 +605,9 @@ btnAbrir.onclick = () => modalFamilia.show();
 // INICIALIZACIÓN
 // =======================================
 document.addEventListener("DOMContentLoaded", async () => {
+    await cargarPaises();
+    await cargarRegiones();
+    await cargarComunas();
     await cargarCursos();
     await cargarAlumnos();
     crearBloqueHijo();

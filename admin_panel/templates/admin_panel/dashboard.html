@@ -15,14 +15,22 @@
 </head>
 <body>
 
+    <!-- ===========================
+         LOADER GLOBAL SCODA
+    ============================ -->
+    <div id="scoda-loader" class="scoda-loader d-none">
+        <div class="spinner-border text-success" role="status"></div>
+        <span class="ms-2 fw-semibold text-success">Cargando...</span>
+    </div>
+
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm fixed-top">
         <div class="container-fluid">
             <span class="navbar-brand fw-bold">SCODA</span>
             <div class="ms-auto d-flex align-items-center">
-                <button id="toggle-theme" class="btn btn-outline-light btn-sm me-2">
+                {% comment %} <button id="toggle-theme" class="btn btn-outline-light btn-sm me-2">
                     <i class="bi bi-moon-fill"></i>
-                </button>
+                </button> {% endcomment %}
 
                 <span class="text-white me-3 fw-semibold">
                     Bienvenido, {{ user.first_name }} {{ user.last_name }}
@@ -131,48 +139,38 @@
 
                 </div>
 
-                {% comment %} <!-- TARJETA ESPECIAL: RETIROS ANTICIPADOS -->
-                <div class="row g-4 mt-2">
-                    <div class="col-md-3">
-                        <div class="scoda-card shadow-sm border-0 p-3 d-flex align-items-center">
-                            <div class="status-dot bg-orange"></div>
-                            <div class="ms-3">
-                                <p class="mb-0 text-muted small">Retiros Anticipados</p>
-                                <h2 class="fw-bold mb-0" id="anticipados-count-card">--</h2>
-                            </div>
-                        </div>
-                    </div>
-                </div> {% endcomment %}
-
                 <!-- LISTADO RÁPIDO -->
                 <div class="row mt-5">
 
-                    <!-- RETIROS -->
-                    <div class="col-md-4">
-                        <div class="card shadow-sm border-0 p-3">
-                            <h6 class="fw-bold text-success">Retiros (últimos 5)</h6>
-                            <ul id="lista-retiros" class="list-group list-group-flush small"></ul>
-                        </div>
-                    </div>
-
-                    <!-- AUSENTES -->
-                    <div class="col-md-4">
+                     <!-- AUSENTES -->
+                    <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-danger">Ausentes (últimos 5)</h6>
                             <ul id="lista-ausentes" class="list-group list-group-flush small"></ul>
                         </div>
                     </div>
-
-                    <!-- EXTENSIÓN -->
-                    <div class="col-md-4">
+                     <!-- EXTENSIÓN -->
+                    <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-purple">Extensión (últimos 5)</h6>
                             <ul id="lista-extension" class="list-group list-group-flush small"></ul>
                         </div>
                     </div>
-
+                    <!-- ANTICIPADOS -->
+                    <div class="col-md-3">
+                        <div class="card shadow-sm border-0 p-3">
+                            <h6 class="fw-bold text-warning">Anticipados (últimos 5)</h6>
+                            <ul id="lista-anticipados" class="list-group list-group-flush small"></ul>
+                        </div>
+                    </div>
+                    <!-- RETIROS -->
+                    <div class="col-md-3">
+                        <div class="card shadow-sm border-0 p-3">
+                            <h6 class="fw-bold text-success">Retiros (últimos 5)</h6>
+                            <ul id="lista-retiros" class="list-group list-group-flush small"></ul>
+                        </div>
+                    </div>
                 </div>
-
             </div>
         </main>
 
@@ -190,7 +188,9 @@
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'js/dashboard.js' %}"></script>
+
+    {% now "U" as timestamp %}
+    <script src="{% static 'js/dashboard.js' %}?v={{ timestamp }}"></script>
 
 </body>
 </html>

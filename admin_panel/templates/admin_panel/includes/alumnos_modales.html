@@ -1,9 +1,9 @@
 <!-- ===========================================================
-     MODALES DE ALUMNOS – SCODA (VERSIÓN MEJORADA)
+     MODALES DE ALUMNOS – SCODA (VERSIÓN FINAL CORREGIDA + MEJORAS)
 =========================================================== -->
 
 <!-- ===========================================================
-     MODAL CREAR FAMILIA (APODERADO + HIJOS + APODERADOS EXTRA)
+     MODAL CREAR FAMILIA
 =========================================================== -->
 <div class="modal fade" id="modalForm" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -17,7 +17,6 @@
       </div>
 
       <div class="modal-body">
-
         <form id="formFamilia">
 
           <!-- ===========================================================
@@ -26,31 +25,69 @@
           <h5 class="fw-bold text-success mb-3">Apoderado Principal</h5>
 
           <div class="row g-2">
+
             <div class="col-md-4">
-              <input type="text" name="nombres_apoderado" class="form-control" placeholder="Nombres" required>
+              <label class="fw-semibold">Nombres</label>
+              <input type="text" name="nombres_apoderado" class="form-control" required>
             </div>
 
             <div class="col-md-4">
-              <input type="text" name="apellido_uno_apoderado" class="form-control" placeholder="Apellido paterno" required>
+              <label class="fw-semibold">Apellido paterno</label>
+              <input type="text" name="apellido_uno_apoderado" class="form-control" required>
             </div>
 
             <div class="col-md-4">
-              <input type="text" name="apellido_dos_apoderado" class="form-control" placeholder="Apellido materno">
+              <label class="fw-semibold">Apellido materno</label>
+              <input type="text" name="apellido_dos_apoderado" class="form-control">
             </div>
 
             <div class="col-md-4">
-              <input type="text" name="run_apoderado" class="form-control" placeholder="RUN" required>
+              <label class="fw-semibold">RUN</label>
+              <input type="text" name="run_apoderado" class="form-control" required>
             </div>
 
             <div class="col-md-4">
-              <input type="email" name="email_apoderado" class="form-control" placeholder="Correo electrónico">
+              <label class="fw-semibold">Correo electrónico</label>
+              <input type="email" name="email_apoderado" class="form-control">
             </div>
 
             <div class="col-md-4">
-              <input type="text" name="fono_apoderado" class="form-control" placeholder="Teléfono">
+              <label class="fw-semibold">Teléfono</label>
+              <input type="text" name="fono_apoderado" class="form-control">
             </div>
 
-            <div class="col-md-6">
+            <!-- PAIS -->
+            <div class="col-md-4">
+              <label class="fw-semibold">País</label>
+              <select name="pais_apoderado" class="form-select" required></select>
+            </div>
+
+            <!-- REGION -->
+            <div class="col-md-4">
+              <label class="fw-semibold">Región</label>
+              <select name="region_apoderado" class="form-select" required></select>
+            </div>
+
+            <!-- COMUNA -->
+            <div class="col-md-4">
+              <label class="fw-semibold">Comuna</label>
+              <select name="comuna_apoderado" class="form-select" required></select>
+            </div>
+
+            <!-- DIRECCIÓN -->
+            <div class="col-md-4">
+              <label class="fw-semibold">Dirección</label>
+              <input type="text" name="direccion_apoderado" class="form-control" required>
+            </div>
+
+            <!-- FECHA NACIMIENTO -->
+            <div class="col-md-4">
+              <label class="fw-semibold">Fecha nacimiento</label>
+              <input type="date" name="fecha_nac_apoderado" class="form-control">
+            </div>
+
+            <!-- PARENTESCO -->
+            <div class="col-md-4">
               <label class="fw-semibold">Parentesco</label>
               <select name="parentesco_apoderado" class="form-select" required>
                 <option value="Apoderado">Apoderado (principal)</option>
@@ -66,11 +103,12 @@
               </select>
             </div>
 
-            <div class="col-md-6 d-flex align-items-end">
+            <div class="col-md-4 d-flex align-items-end">
               <label class="fw-semibold ms-2">
                 <input type="checkbox" name="autorizado" checked> Autorizado para retiro
               </label>
             </div>
+
           </div>
 
           <hr>
@@ -100,7 +138,6 @@
           </button>
 
         </form>
-
       </div>
 
       <div class="modal-footer">
@@ -111,6 +148,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- ===========================================================
      MODAL EDITAR ALUMNO
@@ -132,29 +170,38 @@
 
           <input type="hidden" name="id">
 
-          <div class="mb-2">
-            <label class="fw-semibold">Nombres</label>
-            <input type="text" name="nombres" class="form-control" required>
-          </div>
+          <div class="row g-2">
 
-          <div class="mb-2">
-            <label class="fw-semibold">Apellido Paterno</label>
-            <input type="text" name="apellido_uno" class="form-control" required>
-          </div>
+            <div class="col-md-6">
+              <label class="fw-semibold">Nombres</label>
+              <input type="text" name="nombres" class="form-control" required>
+            </div>
 
-          <div class="mb-2">
-            <label class="fw-semibold">Apellido Materno</label>
-            <input type="text" name="apellido_dos" class="form-control">
-          </div>
+            <div class="col-md-6">
+              <label class="fw-semibold">Apellido paterno</label>
+              <input type="text" name="apellido_uno" class="form-control" required>
+            </div>
 
-          <div class="mb-2">
-            <label class="fw-semibold">RUN</label>
-            <input type="text" name="run" class="form-control" required>
-          </div>
+            <div class="col-md-6">
+              <label class="fw-semibold">Apellido materno</label>
+              <input type="text" name="apellido_dos" class="form-control">
+            </div>
 
-          <div class="mb-3">
-            <label class="fw-semibold">Curso</label>
-            <select name="curso_id" class="form-select" required></select>
+            <div class="col-md-6">
+              <label class="fw-semibold">RUN</label>
+              <input type="text" name="run" class="form-control" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="fw-semibold">Fecha nacimiento</label>
+              <input type="date" name="fecha_nacimiento" class="form-control">
+            </div>
+
+            <div class="col-md-6">
+              <label class="fw-semibold">Curso</label>
+              <select name="curso_id" class="form-select"></select>
+            </div>
+
           </div>
 
         </form>
@@ -171,6 +218,6 @@
 </div>
 
 <!-- ===========================================================
-     MODAL DETALLE ALUMNO (NO CAMBIAR)
+     MODAL DETALLE (NO CAMBIAR)
 =========================================================== -->
 {% include "admin_panel/includes/alumnos_detalle_modal.html" %}
