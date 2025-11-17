@@ -214,3 +214,17 @@ footer {
 #modalNuevoAutorizado .modal-content {
     border-top: 4px solid #0d6efd;
 }
+
+
+#buscadorAlumnos {
+    height: 32px !important;
+}
+
+#btnAbrirModal {
+    height: 32px !important;
+    white-space: nowrap !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+

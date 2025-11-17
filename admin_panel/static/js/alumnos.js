@@ -27,6 +27,9 @@ const loader = document.getElementById("loader");
 const btnExportCSV = document.getElementById("btnExportCSV");
 const btnExportPDF = document.getElementById("btnExportPDF");
 
+// Select buscador
+const buscadorInput = document.getElementById("buscadorAlumnos");
+
 // Selects para apoderado principal
 const selectPais = formFamilia.querySelector("select[name='pais_apoderado']");
 const selectRegion = formFamilia.querySelector("select[name='region_apoderado']");
@@ -128,9 +131,6 @@ async function cargarCursos() {
 // =======================================
 // LISTAR ALUMNOS
 // =======================================
-// =======================================
-// LISTAR ALUMNOS (ORDEN + CORRELATIVO)
-// =======================================
 async function cargarAlumnos() {
     mostrarLoader(true);
     tablaBody.innerHTML = "";
@@ -138,17 +138,16 @@ async function cargarAlumnos() {
     const res = await fetch(`${API_BASE_URL}/api/alumnos`, { headers: getHeaders() });
     let data = await res.json();
 
-    // 🔥 ORDENAR SIEMPRE POR ID ASCENDENTE
     data.sort((a, b) => a.id - b.id);
 
     tablaBody.innerHTML = data
         .map((a, index) => {
             const persona = a.persona_detalle || {};
             const curso = a.curso_detalle?.nombre || "-";
-            
+
             return `
                 <tr>
-                    <td>${index + 1}</td>   <!-- CORRELATIVO -->
+                    <td>${index + 1}</td>
                     <td>${escapeHTML(persona.run || "-")}</td>
                     <td>${escapeHTML(`${safe(persona.nombres)} ${safe(persona.apellido_uno)}`)}</td>
                     <td>${escapeHTML(curso)}</td>
@@ -171,9 +170,30 @@ async function cargarAlumnos() {
     mostrarLoader(false);
 }
 
+// =======================================
+// 🔍 BUSCADOR RÁPIDO (DEBOUNCE)
+// =======================================
+let buscadorTimer = null;
+
+if (buscadorInput) {
+    buscadorInput.addEventListener("input", () => {
+        clearTimeout(buscadorTimer);
+
+        buscadorTimer = setTimeout(() => {
+            const texto = buscadorInput.value.toLowerCase().trim();
+            const filas = document.querySelectorAll("#tablaAlumnos tbody tr");
+
+            filas.forEach(fila => {
+                const contenido = fila.textContent.toLowerCase();
+                fila.style.display = contenido.includes(texto) ? "" : "none";
+            });
+
+        }, 250);
+    });
+}
 
 // =======================================
-// BLOQUES: APODERADOS EXTRA (CON LABEL)
+// BLOQUES: APODERADOS EXTRA
 // =======================================
 const opcionesParentesco = `
     <option value="Padre">Padre</option>
@@ -244,7 +264,7 @@ function crearBloqueApoderadoExtra() {
 }
 
 // =======================================
-// BLOQUES: HIJOS (FECHA ALINEADA)
+// BLOQUES: HIJOS
 // =======================================
 function crearBloqueHijo() {
     const div = document.createElement("div");
