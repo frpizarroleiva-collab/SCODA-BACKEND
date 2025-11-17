@@ -117,7 +117,48 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 3. LISTADOS RÁPIDOS (últimos 5)
+    // 2.1 PORCENTAJE DE ASISTENCIA DIARIA
+    // ============================================================
+    async function cargarPorcentajeAsistencia(cursoId = "") {
+        try {
+            const q = cursoId ? `?curso_id=${cursoId}` : "";
+
+            const totalAlumnos = await fetch(`${BASE}/api/alumnos${q}`, {
+                headers: getHeaders()
+            }).then(r => r.json()).then(d => d.length);
+
+            const totalAusentes = await fetch(`${BASE}/api/estado-alumnos/ausentes${q}`, {
+                headers: getHeaders()
+            }).then(r => r.json()).then(d => d.total_ausentes ?? 0);
+
+            const totalAnticipados = await fetch(`${BASE}/api/estado-alumnos/retiros-anticipados${q}`, {
+                headers: getHeaders()
+            }).then(r => r.json()).then(d => d.total_retiros_anticipados ?? 0);
+
+            const totalExtension = await fetch(`${BASE}/api/estado-alumnos/extension${q}`, {
+                headers: getHeaders()
+            }).then(r => r.json()).then(d => d.total_extension ?? 0);
+
+            const noPresentes = totalAusentes + totalAnticipados + totalExtension;
+            const presentes = totalAlumnos - noPresentes;
+
+            const porcentaje = totalAlumnos > 0
+                ? ((presentes / totalAlumnos) * 100).toFixed(1)
+                : 0;
+
+            document.getElementById("asistencia-porcentaje").textContent = `${porcentaje}%`;
+            document.getElementById("asistencia-detalle").textContent =
+                `${presentes} presentes de ${totalAlumnos}`;
+
+        } catch (error) {
+            console.error("Error cargando asistencia del día:", error);
+            document.getElementById("asistencia-porcentaje").textContent = "--%";
+            document.getElementById("asistencia-detalle").textContent = "Error al cargar";
+        }
+    }
+
+    // ============================================================
+    // 3. LISTADOS RÁPIDOS
     // ============================================================
     async function cargarListadosRapidos(cursoId = "") {
         const q = cursoId ? `?curso_id=${cursoId}` : "";
@@ -164,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 4. GRÁFICO (Chart.js)
+    // 4. GRÁFICO
     // ============================================================
     let chartEstados = null;
 
@@ -186,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         "#f4d03f",
                         "#2ecc71"
                     ],
-                    borderWidth: 1,
+                    borderWidth: 1
                 }],
             },
             options: {
@@ -203,8 +244,11 @@ document.addEventListener("DOMContentLoaded", () => {
     async function cargarTodo() {
         showLoader();
         const cursoSel = document.getElementById("filtro-curso").value;
+
         await cargarTarjetas(cursoSel);
+        await cargarPorcentajeAsistencia(cursoSel);   // ← ACTIVAMOS EL % AQUÍ
         await cargarListadosRapidos(cursoSel);
+
         hideLoader();
     }
 
@@ -216,30 +260,5 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filtro-curso").addEventListener("change", () => {
         cargarTodo();
     });
-
-    // ============================================================
-    // 7. MODO OSCURO / CLARO
-    // ============================================================
-    const themeBtn = document.getElementById("toggle-theme");
-    const currentTheme = localStorage.getItem("theme") || "light";
-
-    document.body.dataset.theme = currentTheme;
-    updateThemeIcon(currentTheme);
-
-    themeBtn.addEventListener("click", () => {
-        const newTheme = document.body.dataset.theme === "light" ? "dark" : "light";
-        document.body.dataset.theme = newTheme;
-        localStorage.setItem("theme", newTheme);
-        updateThemeIcon(newTheme);
-    });
-
-    function updateThemeIcon(theme) {
-        const icon = themeBtn.querySelector("i");
-        if (theme === "dark") {
-            icon.classList.replace("bi-moon-fill", "bi-brightness-high");
-        } else {
-            icon.classList.replace("bi-brightness-high", "bi-moon-fill");
-        }
-    }
 
 });
