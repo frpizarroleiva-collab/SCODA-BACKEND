@@ -92,13 +92,31 @@ async function cargarCursos() {
                     <td>${c.nivel}</td>
                     <td>${c.profesor_nombre || "—"}</td>
                     <td>${c.establecimiento_nombre || "—"}</td>
-                    <td><input type="time" id="inicio-${c.id}" class="form-control form-control-sm" value="${inicio}"></td>
-                    <td><input type="time" id="termino-${c.id}" class="form-control form-control-sm" value="${termino}"></td>
                     <td>
-                        <button class="btn btn-primary btn-sm me-1" onclick="actualizarHorario(${c.id})"><i class="bi bi-save"></i></button>
-                        <button class="btn btn-info btn-sm me-1" onclick="verAlumnos(${c.id})"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-warning btn-sm me-1" onclick="editarCurso(${c.id})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarCurso(${c.id})"><i class="bi bi-trash"></i></button>
+                        <input type="time" id="inicio-${c.id}" class="form-control form-control-sm"
+                            value="${inicio}">
+                    </td>
+                    <td>
+                        <input type="time" id="termino-${c.id}" class="form-control form-control-sm"
+                            value="${termino}">
+                    </td>
+
+                    <td>
+                        <button class="btn btn-primary btn-sm me-1" onclick="actualizarHorario(${c.id})">
+                            <i class="bi bi-save"></i>
+                        </button>
+                        
+                        <button class="btn btn-info btn-sm me-1" onclick="irDetalleCurso(${c.id})">
+                            <i class="bi bi-people"></i>
+                        </button>
+
+                        <button class="btn btn-warning btn-sm me-1" onclick="editarCurso(${c.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+
+                        <button class="btn btn-danger btn-sm" onclick="eliminarCurso(${c.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </td>
                 </tr>`;
         });
@@ -108,6 +126,13 @@ async function cargarCursos() {
     } finally {
         mostrarLoader(false);
     }
+}
+
+// ---------------------------------------------------------------
+//  IR A DETALLE DEL CURSO (NUEVO)
+// ---------------------------------------------------------------
+function irDetalleCurso(id) {
+    window.location.href = `/panel/cursos/${id}/`;
 }
 
 // ---------------------------------------------------------------
@@ -124,6 +149,7 @@ async function actualizarHorario(id) {
             body: JSON.stringify({ hora_inicio, hora_termino }),
         });
         const data = await res.json();
+
         if (res.ok) {
             notificar("Horario actualizado correctamente.");
         } else {
@@ -166,6 +192,7 @@ async function editarCurso(id) {
 
 async function guardarCurso(e) {
     e.preventDefault();
+
     const id = document.getElementById("cursoIdHidden").value;
     const method = id ? "PUT" : "POST";
     const url = id ? `${API_URL}/${id}` : API_URL;
@@ -183,6 +210,7 @@ async function guardarCurso(e) {
             headers: getHeaders(),
             body: JSON.stringify(curso),
         });
+
         if (res.ok) {
             notificar("Curso guardado correctamente.");
             bootstrap.Modal.getInstance(document.getElementById("modalCurso")).hide();
@@ -214,46 +242,6 @@ function eliminarCurso(id) {
             notificar("Error al eliminar el curso.", "danger");
         }
     });
-}
-
-// ---------------------------------------------------------------
-//  VER ALUMNOS DEL CURSO
-// ---------------------------------------------------------------
-async function verAlumnos(cursoId) {
-    const modal = new bootstrap.Modal(document.getElementById("modalAlumnos"));
-    const cont = document.getElementById("alumnosContainer");
-    cont.innerHTML = "<p class='text-center text-muted'>Cargando alumnos...</p>";
-
-    try {
-        const res = await fetch(`${API_URL}/${cursoId}/alumnos`, { headers: getHeaders() });
-        const data = await res.json();
-        const alumnos = data.results || data;
-
-        if (alumnos.length === 0) {
-            cont.innerHTML = "<p class='text-center'>Este curso aún no tiene alumnos registrados.</p>";
-        } else {
-            let tabla = `
-                <table class="table table-bordered table-sm align-middle">
-                    <thead class="table-info text-center">
-                        <tr><th>#</th><th>Nombre</th><th>RUN</th><th>Estado actual</th><th>Observación</th></tr>
-                    </thead><tbody>`;
-            alumnos.forEach((a, i) => {
-                tabla += `<tr>
-                    <td>${i + 1}</td>
-                    <td>${a.nombre_completo}</td>
-                    <td>${a.rut}</td>
-                    <td>${a.estado_actual}</td>
-                    <td>${a.observacion || "—"}</td>
-                </tr>`;
-            });
-            tabla += "</tbody></table>";
-            cont.innerHTML = tabla;
-        }
-        modal.show();
-    } catch (error) {
-        console.error("Error al obtener alumnos:", error);
-        cont.innerHTML = "<p class='text-danger text-center'>Error al cargar los alumnos del curso.</p>";
-    }
 }
 
 // ---------------------------------------------------------------

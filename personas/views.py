@@ -11,12 +11,87 @@ from alumnos.models import PersonaAutorizadaAlumno
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
-    queryset = Persona.objects.all()
+    queryset = Persona.objects.all().select_related(
+        "direccion",
+        "direccion__comuna",
+        "direccion__comuna__region",
+        "direccion__comuna__region__pais",
+        "comuna",
+        "comuna__region",
+        "comuna__region__pais"
+    )
     serializer_class = PersonaSerializer
     permission_classes = [IsAuthenticated, HasAPIKey]
-    # ----------------------------------------------------------
+
+    # ============================================================
+    # CREATE — PERMITE direccion_id Y sexo SIN ROMPER NADA
+    # ============================================================
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+
+        # Normalizar dirección
+        direccion_id = data.get("direccion") or data.get("direccion_id")
+        if direccion_id == "":
+            direccion_id = None
+        if direccion_id:
+            data["direccion"] = direccion_id
+
+        # Normalizar sexo
+        sexo_value = data.get("sexo")
+        if sexo_value == "":
+            sexo_value = None
+        if sexo_value:
+            data["sexo"] = sexo_value
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        persona = serializer.save()
+
+        # Auditoría
+        self.registrar_auditoria(
+            request,
+            "CREACIÓN",
+            "Persona",
+            f"Persona creada: {persona.nombres} {persona.apellido_uno}"
+        )
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    # ============================================================
+    # UPDATE — NORMALIZA SEXO / DIRECCIÓN PARA EVITAR ERRORES
+    # ============================================================
+    def update(self, request, *args, **kwargs):
+        data = request.data.copy()
+
+        if "direccion" in data and data["direccion"] == "":
+            data["direccion"] = None
+
+        if "sexo" in data and data["sexo"] == "":
+            data["sexo"] = None
+
+        request._full_data = data  # Necesario para que DRF use el nuevo dict
+
+        return super().update(request, *args, **kwargs)
+
+    # ============================================================
+    # PARTIAL UPDATE (PATCH)
+    # ============================================================
+    def partial_update(self, request, *args, **kwargs):
+        data = request.data.copy()
+
+        if "direccion" in data and data["direccion"] == "":
+            data["direccion"] = None
+
+        if "sexo" in data and data["sexo"] == "":
+            data["sexo"] = None
+
+        request._full_data = data
+
+        return super().partial_update(request, *args, **kwargs)
+
+    # ============================================================
     # LISTAR SOLO PROFESORES
-    # ----------------------------------------------------------
+    # ============================================================
     @action(
         detail=False,
         methods=['get'],
@@ -27,9 +102,10 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         profesores = Persona.objects.filter(usuario__rol='profesor')
         serializer = self.get_serializer(profesores, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    # ----------------------------------------------------------
-    # VALIDAR RUN (consulta sin generar retiros)
-    # ----------------------------------------------------------
+
+    # ============================================================
+    # VALIDAR RUN — LECTURA COMPLETA + RELACIONES
+    # ============================================================
     @action(
         detail=False,
         methods=['post'],
@@ -39,34 +115,34 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     def validar_run(self, request):
         run = request.data.get("run")
 
-        # ----------------------------------------------------------
-        # VALIDACIÓN DE ENTRADA
-        # ----------------------------------------------------------
         if not run:
             return Response({
                 "existe": False,
                 "mensaje": "Debes enviar un RUN en el body"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # ----------------------------------------------------------
-        # LIMPIEZA DEL RUN
-        # ----------------------------------------------------------
         run = run.replace(".", "").replace(" ", "").upper()
-        print(f"RUN recibido: '{run}'")
 
         try:
-            # ----------------------------------------------------------
-            # BÚSQUEDA DE PERSONA
-            # ----------------------------------------------------------
-            persona = Persona.objects.get(run__iexact=run)
+            persona = Persona.objects.select_related(
+                "direccion",
+                "direccion__comuna",
+                "direccion__comuna__region",
+                "direccion__comuna__region__pais",
+                "comuna",
+                "comuna__region",
+                "comuna__region__pais"
+            ).get(run__iexact=run)
+
             serializer = PersonaBasicaSerializer(persona)
 
-            # ----------------------------------------------------------
-            # RELACIONES COMO APODERADO O AUTORIZADO
-            # ----------------------------------------------------------
+            # Relaciones del apoderado
             apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
                 persona=persona
-            ).select_related('alumno__persona', 'alumno__curso')
+            ).select_related(
+                'alumno__persona',
+                'alumno__curso'
+            )
 
             alumnos = [rel.alumno for rel in apoderados_qs]
 
@@ -86,7 +162,11 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 {
                     "id_relacion": rel.id,
                     "id_alumno": rel.alumno.id,
-                    "alumno": f"{rel.alumno.persona.nombres} {rel.alumno.persona.apellido_uno} {rel.alumno.persona.apellido_dos or ''}".strip(),
+                    "alumno": (
+                        f"{rel.alumno.persona.nombres} "
+                        f"{rel.alumno.persona.apellido_uno} "
+                        f"{rel.alumno.persona.apellido_dos or ''}"
+                    ).strip(),
                     "id_curso": rel.alumno.curso.id if rel.alumno.curso else None,
                     "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
                     "tipo_relacion": rel.tipo_relacion,
@@ -102,9 +182,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
             )
 
-            # ----------------------------------------------------------
-            # AUDITORÍA DE CONSULTA EXITOSA
-            # ----------------------------------------------------------
+            # Auditoría consulta correcta
             self.registrar_auditoria(
                 request,
                 'CONSULTA',
@@ -112,34 +190,37 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 f"Validación de RUN {run} - Resultado: ENCONTRADO"
             )
 
-            # ----------------------------------------------------------
-            # RESPUESTA FINAL — CON CAMPOS EXTENDIDOS
-            # ----------------------------------------------------------
             return Response({
                 "existe": True,
                 "persona": serializer.data,
                 "persona_id": persona.id,
 
-                #NUEVOS CAMPOS APORTADOS POR EL MODELO PERSONA
                 "fono": persona.fono or "",
                 "email": persona.email or "",
                 "fecha_nacimiento": persona.fecha_nacimiento,
-                "direccion": persona.direccion or "",
+
+                # SEXO
+                "sexo": persona.sexo,
+                "sexo_display": persona.get_sexo_display() if persona.sexo else None,
+
+                # DIRECCIÓN
+                "direccion_id": persona.direccion_id,
+                "direccion_detalle": serializer.data.get("direccion_detalle"),
+
+                # UBICACIÓN
                 "comuna_id": persona.comuna_id,
                 "comuna_nombre": persona.comuna.nombre if persona.comuna else None,
                 "pais_nacionalidad_id": persona.pais_nacionalidad_id,
                 "pais_nacionalidad_nombre": (
-                    persona.pais_nacionalidad.nombre 
-                    if persona.pais_nacionalidad 
+                    persona.pais_nacionalidad.nombre
+                    if persona.pais_nacionalidad
                     else None
                 ),
 
-                #AUTORIZACIONES RELACIONADAS
+                # RELACIONES
                 "es_apoderado": es_apoderado,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
-
-                #LISTADO DE ALUMNOS RELACIONADOS
                 "alumnos_asociados": alumnos_data,
                 "alumnos_autorizados": autorizaciones_data,
 
@@ -147,19 +228,12 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
 
         except Persona.DoesNotExist:
-            # ----------------------------------------------------------
-            # AUDITORÍA DE CONSULTA FALLIDA
-            # ----------------------------------------------------------
             self.registrar_auditoria(
                 request,
                 'CONSULTA',
                 'Persona',
                 f"Intento de validación de RUN {run} - Persona no encontrada"
             )
-
-            # ----------------------------------------------------------
-            # RESPUESTA DE ERROR
-            # ----------------------------------------------------------
             return Response({
                 "existe": False,
                 "mensaje": "No se encontró una persona con ese RUN"

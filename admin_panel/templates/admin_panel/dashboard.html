@@ -28,14 +28,9 @@
         <div class="container-fluid">
             <span class="navbar-brand fw-bold">SCODA</span>
             <div class="ms-auto d-flex align-items-center">
-                {% comment %} <button id="toggle-theme" class="btn btn-outline-light btn-sm me-2">
-                    <i class="bi bi-moon-fill"></i>
-                </button> {% endcomment %}
-
                 <span class="text-white me-3 fw-semibold">
                     Bienvenido, {{ user.first_name }} {{ user.last_name }}
                 </span>
-
                 <a href="{% url 'logout' %}" class="btn btn-danger btn-sm">Cerrar sesión</a>
             </div>
         </div>
@@ -84,14 +79,7 @@
                     </select>
                 </div>
 
-                <!-- GRÁFICO -->
-                <div class="card shadow-sm border-0 mb-4 p-3">
-                    <h5 class="text-success fw-bold mb-3">Resumen diario de estados</h5>
-                    <canvas id="grafico-estados" height="80"></canvas>
-                </div>
-
-                <!-- TARJETAS -->
-                                <!-- TARJETA % ASISTENCIA DEL DÍA -->
+                <!-- TARJETA % ASISTENCIA DEL DÍA -->
                 <div class="row g-4 mb-4">
                     <div class="col-md-3">
                         <div class="scoda-card shadow-sm border-0 p-3">
@@ -107,7 +95,8 @@
                     </div>
                 </div>
 
-                <div class="row g-4">
+                <!-- TARJETAS -->
+                <div class="row g-4 mb-4">
 
                     <!-- AUSENTES -->
                     <div class="col-md-3">
@@ -155,23 +144,31 @@
 
                 </div>
 
+                <!-- GRÁFICO (MOVIDO ABAJO) -->
+                <div class="card shadow-sm border-0 mb-4 p-3">
+                    <h5 class="text-success fw-bold mb-3">Resumen diario de estados</h5>
+                    <canvas id="grafico-estados" height="80"></canvas>
+                </div>
+
                 <!-- LISTADO RÁPIDO -->
                 <div class="row mt-5">
 
-                     <!-- AUSENTES -->
+                    <!-- AUSENTES -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-danger">Ausentes (últimos 5)</h6>
                             <ul id="lista-ausentes" class="list-group list-group-flush small"></ul>
                         </div>
                     </div>
-                     <!-- EXTENSIÓN -->
+
+                    <!-- EXTENSIÓN -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-purple">Extensión (últimos 5)</h6>
                             <ul id="lista-extension" class="list-group list-group-flush small"></ul>
                         </div>
                     </div>
+
                     <!-- ANTICIPADOS -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
@@ -179,6 +176,7 @@
                             <ul id="lista-anticipados" class="list-group list-group-flush small"></ul>
                         </div>
                     </div>
+
                     <!-- RETIROS -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
@@ -186,6 +184,7 @@
                             <ul id="lista-retiros" class="list-group list-group-flush small"></ul>
                         </div>
                     </div>
+
                 </div>
             </div>
         </main>

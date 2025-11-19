@@ -133,3 +133,17 @@ def personas_view(request):
         "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/personas.html", context)
+
+@login_required
+def curso_detalle(request, curso_id):
+    if request.user.rol != Usuario.Roles.ADMIN:
+        logout(request)
+        return redirect('/panel/?status=logout')
+
+    context = {
+        "curso_id": curso_id,
+        "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
+    }
+    return render(request, "admin_panel/cursos_detalle.html", context)

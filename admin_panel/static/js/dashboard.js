@@ -1,5 +1,5 @@
 // ======================================
-// DASHBOARD.JS — SCODA (VERSIÓN FINAL CON LOADER)
+// DASHBOARD.JS — SCODA (VERSIÓN FINAL)
 // ======================================
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -42,6 +42,18 @@ document.addEventListener("DOMContentLoaded", () => {
             "Authorization": token ? `Bearer ${token}` : "",
             "X-API-Key": apiKey || "",
         };
+    }
+
+    // ============================================================
+    // FORMATEAR FECHAS (DD/MM/AAAA)
+    // ============================================================
+    function formatearFecha(fechaIso) {
+        const fecha = new Date(fechaIso);
+        return fecha.toLocaleDateString("es-CL", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        });
     }
 
     // ============================================================
@@ -117,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 2.1 PORCENTAJE DE ASISTENCIA DIARIA
+    // 2.1 PORCENTAJE DE ASISTENCIA DIARIA (solo AUSENTES)
     // ============================================================
     async function cargarPorcentajeAsistencia(cursoId = "") {
         try {
@@ -127,20 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: getHeaders()
             }).then(r => r.json()).then(d => d.length);
 
+            // SOLO descontar AUSENTES
             const totalAusentes = await fetch(`${BASE}/api/estado-alumnos/ausentes${q}`, {
                 headers: getHeaders()
             }).then(r => r.json()).then(d => d.total_ausentes ?? 0);
 
-            const totalAnticipados = await fetch(`${BASE}/api/estado-alumnos/retiros-anticipados${q}`, {
-                headers: getHeaders()
-            }).then(r => r.json()).then(d => d.total_retiros_anticipados ?? 0);
-
-            const totalExtension = await fetch(`${BASE}/api/estado-alumnos/extension${q}`, {
-                headers: getHeaders()
-            }).then(r => r.json()).then(d => d.total_extension ?? 0);
-
-            const noPresentes = totalAusentes + totalAnticipados + totalExtension;
-            const presentes = totalAlumnos - noPresentes;
+            const presentes = totalAlumnos - totalAusentes;
 
             const porcentaje = totalAlumnos > 0
                 ? ((presentes / totalAlumnos) * 100).toFixed(1)
@@ -193,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     li.innerHTML = `
                         <strong>${item.alumno_nombre}</strong><br>
                         <small>${item.curso_nombre || ""}</small><br>
-                        <small class="text-muted">${item.hora_registro}</small>
+                        <small class="text-muted">${formatearFecha(item.hora_registro)}</small>
                     `;
                     lista.appendChild(li);
                 });
@@ -246,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const cursoSel = document.getElementById("filtro-curso").value;
 
         await cargarTarjetas(cursoSel);
-        await cargarPorcentajeAsistencia(cursoSel);   // ← ACTIVAMOS EL % AQUÍ
+        await cargarPorcentajeAsistencia(cursoSel);
         await cargarListadosRapidos(cursoSel);
 
         hideLoader();

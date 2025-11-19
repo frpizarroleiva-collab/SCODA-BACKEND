@@ -1,5 +1,5 @@
 <!-- ===========================================================
-     MODALES DE ALUMNOS – SCODA (VERSIÓN FINAL CORREGIDA + MEJORAS)
+     MODALES DE ALUMNOS – SCODA (VERSIÓN FINAL CON CALLE/NUMERO/DEPTO + SEXO)
 =========================================================== -->
 
 <!-- ===========================================================
@@ -56,13 +56,24 @@
               <input type="text" name="fono_apoderado" class="form-control">
             </div>
 
-            <!-- PAIS -->
+            <!-- SEXO -->
+            <div class="col-md-4">
+              <label class="fw-semibold">Sexo</label>
+              <select name="sexo_apoderado" class="form-select">
+                <option value="">Seleccione...</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+                <option value="O">Otro</option>
+              </select>
+            </div>
+
+            <!-- PAÍS -->
             <div class="col-md-4">
               <label class="fw-semibold">País</label>
               <select name="pais_apoderado" class="form-select" required></select>
             </div>
 
-            <!-- REGION -->
+            <!-- REGIÓN -->
             <div class="col-md-4">
               <label class="fw-semibold">Región</label>
               <select name="region_apoderado" class="form-select" required></select>
@@ -74,10 +85,21 @@
               <select name="comuna_apoderado" class="form-select" required></select>
             </div>
 
-            <!-- DIRECCIÓN -->
+
+            <!-- DIRECCIÓN (CALLE / NUMERO / DEPTO) -->
             <div class="col-md-4">
-              <label class="fw-semibold">Dirección</label>
-              <input type="text" name="direccion_apoderado" class="form-control" required>
+              <label class="fw-semibold">Calle</label>
+              <input type="text" name="calle_apoderado" class="form-control" required>
+            </div>
+
+            <div class="col-md-2">
+              <label class="fw-semibold">Número</label>
+              <input type="text" name="numero_apoderado" class="form-control" required>
+            </div>
+
+            <div class="col-md-2">
+              <label class="fw-semibold">Depto (opcional)</label>
+              <input type="text" name="depto_apoderado" class="form-control">
             </div>
 
             <!-- FECHA NACIMIENTO -->
@@ -111,7 +133,7 @@
 
           </div>
 
-          <hr>
+          <hr class="my-4">
 
           <!-- ===========================================================
                APODERADOS ADICIONALES
@@ -124,12 +146,12 @@
             <i class="bi bi-person-plus"></i> Agregar apoderado
           </button>
 
-          <hr class="mt-4">
+          <hr class="my-4">
 
           <!-- ===========================================================
                HIJOS
           ============================================================ -->
-          <h5 class="fw-bold text-success">Hijos</h5>
+          <h5 class="fw-bold text-success mb-3">Hijos</h5>
 
           <div id="contenedorHijos"></div>
 
@@ -167,7 +189,6 @@
       <div class="modal-body">
 
         <form id="formEditar">
-
           <input type="hidden" name="id">
 
           <div class="row g-2">
@@ -202,6 +223,17 @@
               <select name="curso_id" class="form-select"></select>
             </div>
 
+            <!-- SEXO ALUMNO -->
+            <div class="col-md-6">
+              <label class="fw-semibold">Sexo</label>
+              <select name="sexo" class="form-select">
+                <option value="">Seleccione...</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+                <option value="O">Otro</option>
+              </select>
+            </div>
+
           </div>
 
         </form>
@@ -218,6 +250,6 @@
 </div>
 
 <!-- ===========================================================
-     MODAL DETALLE (NO CAMBIAR)
+     MODAL DETALLE
 =========================================================== -->
 {% include "admin_panel/includes/alumnos_detalle_modal.html" %}

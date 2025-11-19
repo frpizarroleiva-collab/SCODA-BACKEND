@@ -1,6 +1,10 @@
 ﻿from django.db import models
 from django.conf import settings
 
+class Sexo(models.TextChoices):
+    MASCULINO = "M", "Masculino"
+    FEMENINO = "F", "Femenino"
+    OTRO = "O", "Otro"
 
 class Persona(models.Model):
     usuario = models.OneToOneField(
@@ -23,13 +27,44 @@ class Persona(models.Model):
     apellido_dos = models.CharField(max_length=120, blank=True, null=True)
 
     fecha_nacimiento = models.DateField(blank=True, null=True)
+    
+    sexo = models.CharField(
+    max_length=1,
+    choices=Sexo.choices,
+    blank=True,
+    null=True)
+
 
     email = models.EmailField(max_length=120, blank=True, null=True)
     fono = models.CharField(max_length=20, blank=True, null=True)
 
-    comuna = models.ForeignKey('ubicacion.Comuna',on_delete=models.SET_NULL, blank=True,null=True,related_name='personas')
-    pais_nacionalidad = models.ForeignKey('ubicacion.Pais',on_delete=models.SET_NULL,blank=True,null=True,related_name='nacionales')
-    direccion = models.CharField(max_length=255,blank=True,null=True)
+    # =======================================
+    # UBICACIÓN / NACIONALIDAD / DIRECCIÓN
+    # =======================================
+    comuna = models.ForeignKey(
+        'ubicacion.Comuna',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='personas'
+    )
+
+    pais_nacionalidad = models.ForeignKey(
+        'ubicacion.Pais',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='nacionales'
+    )
+
+    direccion = models.ForeignKey(
+        'ubicacion.Direccion',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='personas'
+    )
+
 
     class Meta:
         db_table = 'persona'

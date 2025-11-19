@@ -1,6 +1,9 @@
 ﻿from django.db import models
 
 
+# ============================
+#         PAÍS
+# ============================
 class Pais(models.Model):
     nombre = models.CharField(max_length=120)
     codigo_iso_alpha_2 = models.CharField(unique=True, max_length=2, blank=True, null=True)
@@ -14,6 +17,9 @@ class Pais(models.Model):
         return self.nombre
 
 
+# ============================
+#        REGIÓN
+# ============================
 class Region(models.Model):
     nombre = models.CharField(max_length=120)
     pais = models.ForeignKey(
@@ -29,6 +35,9 @@ class Region(models.Model):
         return self.nombre
 
 
+# ============================
+#        COMUNA
+# ============================
 class Comuna(models.Model):
     nombre = models.CharField(max_length=120)
     region = models.ForeignKey(
@@ -42,3 +51,28 @@ class Comuna(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+# ============================
+#       DIRECCIÓN (NUEVA)
+# ============================
+class Direccion(models.Model):
+    calle = models.CharField(max_length=255)
+    numero = models.CharField(max_length=20)
+    depto = models.CharField(max_length=20, blank=True, null=True)
+
+    comuna = models.ForeignKey(
+        'ubicacion.Comuna',
+        on_delete=models.PROTECT,
+        related_name='direcciones'
+    )
+
+    class Meta:
+        db_table = 'direccion'
+
+    def __str__(self):
+        texto = f"{self.calle} {self.numero}"
+        if self.depto:
+            texto += f", Depto {self.depto}"
+        texto += f", {self.comuna.nombre}"
+        return texto

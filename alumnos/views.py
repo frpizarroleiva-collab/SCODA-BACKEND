@@ -11,8 +11,26 @@ from .serializers import AlumnoSerializer
 
 from personas.models import Persona
 from escuela.models import Curso
+from ubicacion.models import Direccion   # ← ✅ IMPORTANTE
 
 
+# ============================================================
+# FUNCION AUXILIAR PARA CREAR DIRECCIÓN
+# ============================================================
+def crear_direccion(data):
+    if not data or not isinstance(data, dict):
+        return None
+    return Direccion.objects.create(
+        calle=data.get("calle"),
+        numero=data.get("numero"),
+        depto=data.get("depto", ""),
+        comuna_id=data.get("comuna_id"),
+    )
+
+
+# ============================================================
+#   ALUMNO VIEWSET
+# ============================================================
 class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = Alumno.objects.select_related(
         'persona', 'curso__establecimiento'
@@ -46,8 +64,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "run": a.persona.run,
             "telefono": a.persona.fono or "",
             "correo": a.persona.email or "",
-            "direccion": a.persona.direccion or "",
+            "direccion": a.persona.direccion,
             "fecha_nacimiento": a.persona.fecha_nacimiento,
+            "sexo": a.persona.sexo,
             "comuna_id": a.persona.comuna_id,
             "comuna_nombre": a.persona.comuna.nombre if a.persona.comuna else None,
             "region_id": a.persona.comuna.region.id if a.persona.comuna and a.persona.comuna.region else None,
@@ -61,7 +80,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "parentesco": a.parentesco
         } for a in apoderados]
 
-        # --- AUTORIZADOS (autorizado=True) ---
+        # --- AUTORIZADOS ---
         autorizados = PersonaAutorizadaAlumno.objects.select_related(
             'persona'
         ).filter(
@@ -76,8 +95,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "parentesco": a.parentesco,
             "telefono": a.persona.fono or "",
             "correo": a.persona.email or "",
-            "direccion": a.persona.direccion or "",
+            "direccion": a.persona.direccion,
             "fecha_nacimiento": a.persona.fecha_nacimiento,
+            "sexo": a.persona.sexo,
             "comuna_id": a.persona.comuna_id,
             "comuna_nombre": a.persona.comuna.nombre if a.persona.comuna else None,
             "region_id": a.persona.comuna.region.id if a.persona.comuna and a.persona.comuna.region else None,
@@ -89,7 +109,6 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "autorizado": a.autorizado
         } for a in autorizados]
 
-        # --- DATOS ALUMNO ---
         data_alumno = {
             "id": alumno.id,
             "run": alumno.persona.run,
@@ -99,6 +118,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "establecimiento": alumno.curso.establecimiento.nombre
             if alumno.curso and alumno.curso.establecimiento else None,
             "fecha_nacimiento": alumno.persona.fecha_nacimiento,
+            "sexo": alumno.persona.sexo,
             "direccion": alumno.persona.direccion,
             "comuna_id": alumno.persona.comuna_id,
             "comuna_nombre": alumno.persona.comuna.nombre if alumno.persona.comuna else None,
@@ -119,18 +139,17 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         })
 
     # ============================================================
-    # UPDATE — ACTUALIZA PERSONA + ALUMNO
+    # UPDATE — ACTUALIZA PERSONA + ALUMNO (NO TOCADO)
     # ============================================================
     def update(self, request, *args, **kwargs):
         alumno = self.get_object()
         persona = alumno.persona
         data = request.data
 
-        # --- CAMPOS DE PERSONA ---
         persona_fields = [
             "nombres", "apellido_uno", "apellido_dos", "run",
             "fecha_nacimiento", "direccion", "comuna_id",
-            "pais_nacionalidad_id", "fono", "email"
+            "pais_nacionalidad_id", "fono", "email", "sexo"
         ]
 
         for field in persona_fields:
@@ -139,7 +158,6 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
         persona.save()
 
-        # --- CURSO ---
         if "curso_id" in data:
             alumno.curso_id = data["curso_id"]
 
@@ -151,7 +169,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         }, status=200)
 
     # ============================================================
-    # CREAR FAMILIA COMPLETA
+    # CREAR FAMILIA COMPLETA (SOLO CAMBIOS NECESARIOS)
     # ============================================================
     @action(detail=False, methods=['post'], url_path='crear-familia')
     def crear_familia(self, request):
@@ -163,7 +181,10 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if not apoderado_data or not alumnos_data:
             return Response({"error": "Faltan datos para registrar la familia."}, status=400)
 
-        # --- CREAR O BUSCAR APODERADO PRINCIPAL ---
+        # 1️⃣ Crear dirección DEL APODERADO (NOVEDAD)
+        direccion_apoderado = crear_direccion(apoderado_data.get("direccion"))
+
+        # 2️⃣ CREAR / OBTENER APODERADO PRINCIPAL
         try:
             apoderado_ppal, _ = Persona.objects.get_or_create(
                 run=apoderado_data.get('run'),
@@ -173,29 +194,25 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     'apellido_dos': apoderado_data.get('apellido_dos', ''),
                     'fono': apoderado_data.get('fono', ''),
                     'email': apoderado_data.get('email', ''),
-                    'direccion': apoderado_data.get('direccion', ''),
+                    'direccion': direccion_apoderado,    # ←️ AHORA CORRECTO
                     'fecha_nacimiento': apoderado_data.get('fecha_nacimiento'),
                     'comuna_id': apoderado_data.get('comuna_id'),
-                    'pais_nacionalidad_id': apoderado_data.get('pais_nacionalidad_id')
+                    'pais_nacionalidad_id': apoderado_data.get('pais_nacionalidad_id'),
+                    'sexo': apoderado_data.get('sexo')
                 }
             )
         except IntegrityError:
             return Response({"error": "El RUN del apoderado ya está registrado."}, status=400)
 
-        # --- Si es alumno, no puede ser apoderado ---
         if hasattr(apoderado_ppal, "alumno"):
             return Response({"error": "Esta persona es un ALUMNO y no puede ser apoderado."}, status=400)
 
         # ========================================================
-        # CREAR LOS ALUMNOS (HEREDA DIRECCIÓN/COMUNA/PAÍS)
+        # 3️⃣ CREAR LOS ALUMNOS (HEREDAN DIRECCION DEL APODERADO)
         # ========================================================
         alumnos_creados = []
 
         for alumno_data in alumnos_data:
-            curso_id = alumno_data.get('curso_id')
-
-            if not curso_id:
-                continue
 
             try:
                 persona_alumno = Persona.objects.create(
@@ -203,17 +220,18 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     apellido_uno=alumno_data.get('apellido_uno', ''),
                     apellido_dos=alumno_data.get('apellido_dos', ''),
                     run=alumno_data.get('run'),
-                    direccion=apoderado_ppal.direccion,
+                    direccion=apoderado_ppal.direccion,   # ←️ HEREDA DIRECCIÓN
                     comuna_id=apoderado_ppal.comuna_id,
                     pais_nacionalidad_id=apoderado_ppal.pais_nacionalidad_id,
                     fecha_nacimiento=alumno_data.get('fecha_nacimiento'),
+                    sexo=alumno_data.get('sexo')
                 )
             except IntegrityError:
                 return Response({"error": f"Run {alumno_data.get('run')} ya existe."}, status=400)
 
             alumno = Alumno.objects.create(
                 persona=persona_alumno,
-                curso_id=curso_id
+                curso_id=alumno_data.get('curso_id')
             )
 
             # Asociar apoderado principal
@@ -222,15 +240,17 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 persona=apoderado_ppal,
                 tipo_relacion="apoderado",
                 parentesco=apoderado_data.get("parentesco", "Apoderado"),
-                autorizado=apoderado_data.get("autorizado", True)
+                autorizado=True
             )
 
             alumnos_creados.append(alumno)
 
         # ========================================================
-        # APODERADOS EXTRA
+        # 4️⃣ APODERADOS EXTRAS (CREAN SU DIRECCIÓN TAMBIÉN)
         # ========================================================
         for ap_data in apoderados_extras:
+
+            direccion_extra = crear_direccion(ap_data.get("direccion"))
 
             try:
                 persona_extra, _ = Persona.objects.get_or_create(
@@ -241,10 +261,11 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                         'apellido_dos': ap_data.get('apellido_dos', ''),
                         'fono': ap_data.get('fono', ''),
                         'email': ap_data.get('email', ''),
-                        'direccion': ap_data.get('direccion', ''),
+                        'direccion': direccion_extra,  # ←️ CORRECTO
                         'fecha_nacimiento': ap_data.get('fecha_nacimiento'),
                         'comuna_id': ap_data.get('comuna_id'),
-                        'pais_nacionalidad_id': ap_data.get('pais_nacionalidad_id')
+                        'pais_nacionalidad_id': ap_data.get('pais_nacionalidad_id'),
+                        'sexo': ap_data.get('sexo')
                     }
                 )
             except IntegrityError:
@@ -283,8 +304,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         }, status=201)
 
 
+
 # ============================================================
-# CRUD PERSONAS AUTORIZADAS
+# CRUD PERSONAS AUTORIZADAS — (SIN CAMBIOS)
 # ============================================================
 class PersonaAutorizadaAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = PersonaAutorizadaAlumno.objects.select_related(
