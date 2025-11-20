@@ -238,3 +238,127 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "existe": False,
                 "mensaje": "No se encontró una persona con ese RUN"
             }, status=status.HTTP_404_NOT_FOUND)
+            
+    # ============================================================
+    # VALIDAR DOCUMENTO IDENTIDAD (Pasaporte, DNI, RUN extranjero)
+    # ============================================================
+    @action(detail=False,methods=['post'],url_path='validar-documento',permission_classes=[IsAuthenticated, HasAPIKey])
+    def validar_documento(self, request):
+        valor = request.data.get("valor")
+
+        if not valor:
+            return Response({
+                "existe": False,
+                "mensaje": "Debes enviar un documento o RUN en el body"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        valor = valor.replace(" ", "").upper()
+        from .models import DocumentoIdentidad
+        doc = DocumentoIdentidad.objects.select_related("persona").filter(
+            identificador=valor
+        ).first()
+
+        if doc:
+            persona = doc.persona
+        else:
+            persona = Persona.objects.filter(run__iexact=valor).first()
+
+        if not persona:
+            self.registrar_auditoria(
+                request,
+                'CONSULTA',
+                'Persona',
+                f"Intento de validación de documento {valor} - Persona no encontrada"
+            )
+            return Response({
+                "existe": False,
+                "mensaje": "No se encontró una persona con ese documento o RUN"
+            }, status=status.HTTP_404_NOT_FOUND)
+        serializer = PersonaBasicaSerializer(persona)
+
+        apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
+            persona=persona
+        ).select_related(
+            'alumno__persona',
+            'alumno__curso'
+        )
+
+        alumnos = [rel.alumno for rel in apoderados_qs]
+
+        alumnos_data = [
+            {
+                "id_alumno": a.id,
+                "nombres": a.persona.nombres,
+                "apellido_uno": a.persona.apellido_uno,
+                "apellido_dos": a.persona.apellido_dos,
+                "id_curso": a.curso.id if a.curso else None,
+                "curso_nombre": a.curso.nombre if a.curso else None
+            }
+            for a in alumnos
+        ]
+
+        autorizaciones_data = [
+            {
+                "id_relacion": rel.id,
+                "id_alumno": rel.alumno.id,
+                "alumno": (
+                    f"{rel.alumno.persona.nombres} "
+                    f"{rel.alumno.persona.apellido_uno} "
+                    f"{rel.alumno.persona.apellido_dos or ''}"
+                ).strip(),
+                "id_curso": rel.alumno.curso.id if rel.alumno.curso else None,
+                "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
+                "tipo_relacion": rel.tipo_relacion,
+                "autorizado": rel.autorizado
+            }
+            for rel in apoderados_qs
+        ]
+
+        es_apoderado = any(rel.tipo_relacion.lower() == 'apoderado' for rel in apoderados_qs)
+        es_autorizado = any(rel.autorizado for rel in apoderados_qs)
+
+        mensaje_autorizado = (
+            "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
+        )
+
+        # --------------------------------------------
+        # 4) Registrar auditoría
+        # --------------------------------------------
+        self.registrar_auditoria(
+            request,
+            'CONSULTA',
+            'Persona',
+            f"Validación de documento {valor} - Resultado: ENCONTRADO"
+        )
+        return Response({
+            "existe": True,
+            "persona": serializer.data,
+            "persona_id": persona.id,
+
+            "fono": persona.fono or "",
+            "email": persona.email or "",
+            "fecha_nacimiento": persona.fecha_nacimiento,
+
+            "sexo": persona.sexo,
+            "sexo_display": persona.get_sexo_display() if persona.sexo else None,
+
+            "direccion_id": persona.direccion_id,
+            "direccion_detalle": serializer.data.get("direccion_detalle"),
+
+            "comuna_id": persona.comuna_id,
+            "comuna_nombre": persona.comuna.nombre if persona.comuna else None,
+            "pais_nacionalidad_id": persona.pais_nacionalidad_id,
+            "pais_nacionalidad_nombre": (
+                persona.pais_nacionalidad.nombre
+                if persona.pais_nacionalidad
+                else None
+            ),
+
+            "es_apoderado": es_apoderado,
+            "es_autorizado": es_autorizado,
+            "mensaje_autorizado": mensaje_autorizado,
+            "alumnos_asociados": alumnos_data,
+            "alumnos_autorizados": autorizaciones_data,
+
+            "mensaje": "Validación exitosa. Seleccione al alumno que desea retirar."
+        }, status=status.HTTP_200_OK)

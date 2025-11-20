@@ -153,7 +153,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             )
 
             # -----------------------------------------------------
-            # DETECTAR RETIRO ANTICIPADO (manual o QR)
+            # DETECTAR RETIRO ANTICIPADO
             # -----------------------------------------------------
             if estado_upper == 'RETIRADO':
                 curso = Curso.objects.filter(id=curso_id).first()
@@ -161,7 +161,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     hora_termino = curso.hora_termino
                     hora_actual = datetime.now().time()
                     if hora_actual < hora_termino:
-                        # Marca como anticipado si es antes de la hora
                         obj.retiro_anticipado = True
                         obj.save(update_fields=['retiro_anticipado'])
 
@@ -235,10 +234,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
     # ----------------------------------------------------------
-    # LISTADOS: AUSENTES / RETIROS / EXTENSIÓN / RETIROS ANTICIPADOS
-    # ----------------------------------------------------------
-       # ----------------------------------------------------------
-    # LISTAR AUSENTES (mantiene estructura, solo agrega foto)
+    # LISTAR AUSENTES
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='ausentes')
     def listar_ausentes(self, request):
@@ -279,7 +275,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "establecimiento": establecimiento.nombre if establecimiento else None,
                 "fecha": estado.fecha,
                 "estado": estado.estado,
-                "hora_registro": estado.hora_registro,
+                "hora_registro": estado.hora_registro.strftime("%H:%M") if estado.hora_registro else "-",
                 "observacion": estado.observacion,
                 "foto_documento": estado.foto_documento if getattr(estado, 'foto_documento', None) else None,
                 "quien_registro": usuario_registro.email if usuario_registro else None
@@ -292,13 +288,13 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "alumnos": alumnos_data
         }, status=status.HTTP_200_OK)
 
-
     # ----------------------------------------------------------
-    # LISTAR RETIROS
+    # LISTAR RETIROS (CON PARENTESCO)
     # ----------------------------------------------------------
     @action(detail=False, methods=['get'], url_path='retiros')
     def listar_retiros(self, request):
         from alumnos.models import PersonaAutorizadaAlumno
+
         user = request.user
         if getattr(user, 'rol', '').lower() == 'apoderado':
             return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
@@ -328,6 +324,17 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             retirado_por = getattr(estado, 'retirado_por', None)
             usuario_registro = estado.usuario_registro
 
+            # ----------------------------------------------------------
+            # BUSCAR PARENTESCO (tipo_relacion) ENTRE PERSONA Y ALUMNO
+            # ----------------------------------------------------------
+            parentesco = None
+            if retirado_por:
+                relacion = PersonaAutorizadaAlumno.objects.filter(
+                    alumno_id=alumno.id,
+                    persona_id=retirado_por.id
+                ).first()
+                parentesco = getattr(relacion, "tipo_relacion", None)
+
             alumnos_data.append({
                 "id": estado.id,
                 "alumno": alumno.id,
@@ -337,11 +344,12 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "establecimiento": establecimiento.nombre if establecimiento else None,
                 "fecha": estado.fecha,
                 "estado": estado.estado,
-                "hora_registro": estado.hora_registro,
+                "hora_registro": estado.hora_registro.strftime("%H:%M") if estado.hora_registro else "-",
                 "observacion": estado.observacion,
                 "foto_documento": estado.foto_documento,
                 "quien_retiro": f"{retirado_por.nombres} {retirado_por.apellido_uno}" if retirado_por else None,
                 "quien_registro": usuario_registro.email if usuario_registro else None,
+                "parentesco": parentesco,
                 "retiro_anticipado": estado.retiro_anticipado
             })
 
@@ -397,7 +405,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "establecimiento": establecimiento.nombre if establecimiento else None,
                 "fecha": estado.fecha,
                 "estado": estado.estado,
-                "hora_registro": estado.hora_registro,
+                "hora_registro": estado.hora_registro.strftime("%H:%M") if estado.hora_registro else "-",
                 "observacion": estado.observacion,
                 "foto_documento": estado.foto_documento,
                 "quien_retiro": f"{retirado_por.nombres} {retirado_por.apellido_uno}" if retirado_por else None,
@@ -454,7 +462,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "establecimiento": establecimiento.nombre if establecimiento else None,
                 "fecha": estado.fecha,
                 "estado": estado.estado,
-                "hora_registro": estado.hora_registro,
+                "hora_registro": estado.hora_registro.strftime("%H:%M") if estado.hora_registro else "-",
                 "observacion": estado.observacion,
                 "foto_documento": estado.foto_documento,
                 "quien_registro": usuario_registro.email if usuario_registro else None

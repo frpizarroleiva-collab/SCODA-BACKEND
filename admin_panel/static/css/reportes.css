@@ -1,0 +1,20 @@
+/* Igualar estructura con Usuarios */
+body {
+    background-color: #f8f9fa !important;
+}
+
+/* Ajustes de tabla */
+.table {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Ajustes de tarjeta */
+.card {
+    border-radius: 10px;
+}
+
+/* Botón volver igual a Usuarios */
+header .btn {
+    border-radius: 8px;
+}

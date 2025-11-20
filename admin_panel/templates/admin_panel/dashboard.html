@@ -42,21 +42,35 @@
         <!-- SIDEBAR -->
         <div id="sidebar" class="bg-white border-end shadow-sm pt-4">
             <ul class="nav flex-column px-3">
+
+                <!-- Usuarios -->
                 <li class="nav-item mb-2">
                     <a href="{% url 'usuarios' %}" class="nav-link text-success fw-semibold">
                         <i class="bi bi-people me-2"></i>Usuarios
                     </a>
                 </li>
+
+                <!-- Alumnos -->
                 <li class="nav-item mb-2">
                     <a href="{% url 'alumnos' %}" class="nav-link text-success fw-semibold">
                         <i class="bi bi-mortarboard me-2"></i>Alumnos
                     </a>
                 </li>
+
+                <!-- Cursos -->
                 <li class="nav-item mb-2">
                     <a href="{% url 'cursos' %}" class="nav-link text-success fw-semibold">
                         <i class="bi bi-journal me-2"></i>Cursos
                     </a>
                 </li>
+
+                <!-- NUEVO: Reportes -->
+                <li class="nav-item mb-2">
+                    <a href="{% url 'reportes' %}" class="nav-link text-success fw-semibold">
+                        <i class="bi bi-clipboard-data me-2"></i>Reportes
+                    </a>
+                </li>
+
             </ul>
         </div>
 
@@ -144,7 +158,7 @@
 
                 </div>
 
-                <!-- GRÁFICO (MOVIDO ABAJO) -->
+                <!-- GRÁFICO -->
                 <div class="card shadow-sm border-0 mb-4 p-3">
                     <h5 class="text-success fw-bold mb-3">Resumen diario de estados</h5>
                     <canvas id="grafico-estados" height="80"></canvas>
@@ -153,7 +167,6 @@
                 <!-- LISTADO RÁPIDO -->
                 <div class="row mt-5">
 
-                    <!-- AUSENTES -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-danger">Ausentes (últimos 5)</h6>
@@ -161,7 +174,6 @@
                         </div>
                     </div>
 
-                    <!-- EXTENSIÓN -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-purple">Extensión (últimos 5)</h6>
@@ -169,7 +181,6 @@
                         </div>
                     </div>
 
-                    <!-- ANTICIPADOS -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-warning">Anticipados (últimos 5)</h6>
@@ -177,7 +188,6 @@
                         </div>
                     </div>
 
-                    <!-- RETIROS -->
                     <div class="col-md-3">
                         <div class="card shadow-sm border-0 p-3">
                             <h6 class="fw-bold text-success">Retiros (últimos 5)</h6>

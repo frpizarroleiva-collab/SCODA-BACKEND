@@ -39,10 +39,8 @@ def login_view(request):
             # Guardar token para las vistas del panel
             request.session["ACCESS_TOKEN"] = access_token
 
-            # Redirige con parámetro para mostrar mensaje en frontend
             return redirect('/panel/dashboard/?status=success')
 
-        # Si las credenciales son inválidas o el rol no es admin
         return render(request, 'admin_panel/login.html', {
             'error_message': 'Credenciales inválidas o sin permisos de administrador.'
         })
@@ -65,6 +63,8 @@ def dashboard(request):
         "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/dashboard.html", context)
+
+
 # ---------------------------------------------------------
 # LOGOUT
 # ---------------------------------------------------------
@@ -134,6 +134,7 @@ def personas_view(request):
     }
     return render(request, "admin_panel/personas.html", context)
 
+
 @login_required
 def curso_detalle(request, curso_id):
     if request.user.rol != Usuario.Roles.ADMIN:
@@ -147,3 +148,20 @@ def curso_detalle(request, curso_id):
         "API_BASE_URL": get_api_base_url(),
     }
     return render(request, "admin_panel/cursos_detalle.html", context)
+
+
+# ---------------------------------------------------------
+# NUEVO: PANEL DE REPORTES SCODA
+# ---------------------------------------------------------
+@login_required
+def reportes_view(request):
+    if request.user.rol != Usuario.Roles.ADMIN:
+        logout(request)
+        return redirect('/panel/?status=logout')
+
+    context = {
+        "SCODA_API_KEY": getattr(settings, "SCODA_API_KEY", os.getenv("SCODA_API_KEY", "")),
+        "ACCESS_TOKEN": request.session.get("ACCESS_TOKEN", ""),
+        "API_BASE_URL": get_api_base_url(),
+    }
+    return render(request, "admin_panel/reportes.html", context)

@@ -4,16 +4,10 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.conf import settings
 from django.conf.urls.static import static
-
+from personas.views_documento import DocumentoIdentidadViewSet
 # -------------------------
 # IMPORTS DE VIEWSETS
-# -------------------------
-from accounts.views import (
-    UsuarioViewSet,
-    CustomTokenObtainPairView,
-    ResetPasswordFormView,
-    ResetPasswordDoneView,
-)
+from accounts.views import (UsuarioViewSet,CustomTokenObtainPairView,ResetPasswordFormView,ResetPasswordDoneView,)
 from escuela.views import CursoViewSet
 from personas.views import PersonaViewSet
 from establecimientos.views import EstablecimientoViewSet
@@ -35,6 +29,8 @@ router.register(r'estado-alumnos', EstadoAlumnoViewSet, basename='estado-alumno'
 router.register(r'paises', PaisViewSet, basename='pais')
 router.register(r'regiones', RegionViewSet, basename='region')
 router.register(r'comunas', ComunaViewSet, basename='comuna')
+router.register(r"documentos-identidad",DocumentoIdentidadViewSet,basename="documentos-identidad")
+
 
 # -------------------------------------------------------
 # URLS PRINCIPALES

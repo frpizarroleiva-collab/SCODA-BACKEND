@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Persona
+from .models import DocumentoIdentidad
 
 
 # ============================================================
@@ -30,6 +31,7 @@ class PersonaSerializer(serializers.ModelSerializer):
         if value and value not in ["M", "F", "O"]:
             raise serializers.ValidationError("Sexo debe ser M, F u O.")
         return value
+
     class Meta:
         model = Persona
         fields = [
@@ -59,8 +61,7 @@ class PersonaSerializer(serializers.ModelSerializer):
             "pais_nacionalidad_nombre",
             "direccion_detalle",
         ]
-        
-        
+
 
     def get_direccion_detalle(self, obj):
         if not obj.direccion:
@@ -73,7 +74,6 @@ class PersonaSerializer(serializers.ModelSerializer):
             texto += f", Depto {d.depto}"
 
         texto += f", {d.comuna.nombre}"
-
         return texto
 
 
@@ -88,8 +88,6 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
     )
 
     direccion_detalle = serializers.SerializerMethodField()
-
-    # Sexo legible
     sexo_display = serializers.CharField(source="get_sexo_display", read_only=True)
 
     class Meta:
@@ -118,7 +116,7 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
             "pais_nacionalidad",
             "pais_nacionalidad_nombre",
         ]
-        
+
     def get_direccion_detalle(self, obj):
         if not obj.direccion:
             return None
@@ -130,5 +128,45 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
             texto += f", Depto {d.depto}"
 
         texto += f", {d.comuna.nombre}"
-
         return texto
+
+
+# ============================================================
+# NUEVO SERIALIZER — SOLO PARA LA API DE BÚSQUEDA POR DOCUMENTO
+# ============================================================
+class PersonaBusquedaSerializer(serializers.ModelSerializer):
+    pais_nacionalidad_nombre = serializers.CharField(
+        source="pais_nacionalidad.nombre",
+        read_only=True
+    )
+
+    class Meta:
+        model = Persona
+        fields = [
+            "id",
+            "nombres",
+            "apellido_uno",
+            "apellido_dos",
+            "email",
+            "sexo",
+            "pais_nacionalidad",
+            "pais_nacionalidad_nombre",
+        ]
+
+
+class DocumentoIdentidadSerializer(serializers.ModelSerializer):
+    pais_emisor_nombre = serializers.CharField(
+        source="pais_emisor.nombre",
+        read_only=True
+    )
+
+    class Meta:
+        model = DocumentoIdentidad
+        fields = [
+            "id",
+            "persona",
+            "tipo",
+            "identificador",
+            "pais_emisor",
+            "pais_emisor_nombre",
+        ]
