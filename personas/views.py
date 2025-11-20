@@ -334,31 +334,17 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "existe": True,
             "persona": serializer.data,
             "persona_id": persona.id,
-
             "fono": persona.fono or "",
             "email": persona.email or "",
             "fecha_nacimiento": persona.fecha_nacimiento,
-
             "sexo": persona.sexo,
-            "sexo_display": persona.get_sexo_display() if persona.sexo else None,
-
-            "direccion_id": persona.direccion_id,
             "direccion_detalle": serializer.data.get("direccion_detalle"),
-
-            "comuna_id": persona.comuna_id,
             "comuna_nombre": persona.comuna.nombre if persona.comuna else None,
-            "pais_nacionalidad_id": persona.pais_nacionalidad_id,
-            "pais_nacionalidad_nombre": (
-                persona.pais_nacionalidad.nombre
-                if persona.pais_nacionalidad
-                else None
-            ),
-
+            "pais_nacionalidad_nombre": (persona.pais_nacionalidad.nombre if persona.pais_nacionalidad else None),
             "es_apoderado": es_apoderado,
             "es_autorizado": es_autorizado,
             "mensaje_autorizado": mensaje_autorizado,
             "alumnos_asociados": alumnos_data,
             "alumnos_autorizados": autorizaciones_data,
-
-            "mensaje": "Validación exitosa. Seleccione al alumno que desea retirar."
+            "mensaje": "Validación exitosa."
         }, status=status.HTTP_200_OK)
