@@ -12,7 +12,6 @@ from alumnos.models import Alumno
 from estados.models import EstadoAlumno
 
 
-
 class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = CursoSerializer
@@ -101,17 +100,14 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         alumnos = Alumno.objects.filter(curso=curso).select_related('persona')
 
         if not alumnos.exists():
-            return Response(
-                {'detail': 'Este curso aún no tiene alumnos registrados.', 'results': []},
-                status=status.HTTP_200_OK
-            )
+            return Response({"results": []}, status=status.HTTP_200_OK)
 
-        # 🔹 Solo mostrar estados del día actual
+        # ---------------- ESTADO DEL DÍA ----------------
         hoy = date.today()
         subquery = EstadoAlumno.objects.filter(
             alumno=OuterRef('pk'),
             fecha=hoy
-        ).order_by('-fecha', '-id')
+        ).order_by('-id')
 
         alumnos = alumnos.annotate(
             estado_actual=Subquery(subquery.values('estado')[:1]),
@@ -122,7 +118,9 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         paginator = LimitOffsetPagination()
         paginator.default_limit = 20
         paginator.max_limit = 100
-        paginated_alumnos = paginator.paginate_queryset(alumnos, request)
+
+        paginated = paginator.paginate_queryset(alumnos, request)
+        alumnos_lista = paginated if paginated is not None else alumnos
 
         data = [
             {
@@ -136,10 +134,63 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     if a.estado_actual_at else None
                 ),
             }
-            for a in paginated_alumnos
+            for a in alumnos_lista
         ]
 
-        return paginator.get_paginated_response(data)
+        if paginated is not None:
+            return paginator.get_paginated_response(data)
+
+        return Response({"results": data}, status=status.HTTP_200_OK)
+
+    # ----------------------------------------------------------
+    # AGREGAR ALUMNO AL CURSO
+    # ----------------------------------------------------------
+    @action(detail=True, methods=['patch'], url_path='agregar-alumno')
+    def agregar_alumno(self, request, pk=None):
+        alumno_id = request.data.get("alumno_id")
+
+        if not alumno_id:
+            return Response({"error": "Debe enviar alumno_id."}, status=400)
+
+        try:
+            alumno = Alumno.objects.get(id=alumno_id)
+        except Alumno.DoesNotExist:
+            return Response({"error": "Alumno no existe."}, status=404)
+
+        alumno.curso_id = pk
+        alumno.save()
+
+        self.registrar_auditoria(
+            request, 'ACTUALIZAR', 'Curso',
+            f"Alumno {alumno.persona.nombres} asignado al curso {pk}"
+        )
+
+        return Response({"message": "Alumno agregado correctamente."})
+
+    # ----------------------------------------------------------
+    # QUITAR ALUMNO DEL CURSO
+    # ----------------------------------------------------------
+    @action(detail=True, methods=['patch'], url_path='quitar-alumno')
+    def quitar_alumno(self, request, pk=None):
+        alumno_id = request.data.get("alumno_id")
+
+        if not alumno_id:
+            return Response({"error": "Debe enviar alumno_id."}, status=400)
+
+        try:
+            alumno = Alumno.objects.get(id=alumno_id, curso_id=pk)
+        except Alumno.DoesNotExist:
+            return Response({"error": "Alumno no pertenece a este curso."}, status=404)
+
+        alumno.curso = None
+        alumno.save()
+
+        self.registrar_auditoria(
+            request, 'ACTUALIZAR', 'Curso',
+            f"Alumno {alumno.persona.nombres} removido del curso {pk}"
+        )
+
+        return Response({"message": "Alumno removido correctamente."})
 
     # ----------------------------------------------------------
     # ACTUALIZAR HORARIO DEL CURSO
@@ -175,4 +226,3 @@ class CursoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
         except Curso.DoesNotExist:
             return Response({"error": "Curso no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-

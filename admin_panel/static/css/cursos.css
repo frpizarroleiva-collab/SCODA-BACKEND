@@ -1,0 +1,38 @@
+/* ======== CHIP BASE ======== */
+.estado-chip {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: white;
+    display: inline-block;
+}
+
+/* ======== ESTADOS ======== */
+
+/* SIN REGISTRO */
+.estado-SIN,
+.estado-SIN_REGISTRO {
+    background-color: #6c757d; /* Gris */
+}
+
+/* AUSENTE */
+.estado-AUSENTE {
+    background-color: #dc3545; /* Rojo */
+}
+
+/* EXTENSIÓN */
+.estado-EXTENSION {
+    background-color: #6f42c1; /* Morado */
+}
+
+/* ANTICIPADO */
+.estado-ANTICIPADO {
+    background-color: #ffc107; /* Amarillo */
+    color: black !important;
+}
+
+/* RETIRADO */
+.estado-RETIRADO {
+    background-color: #6f42c1; /* Morado fuerte */
+}

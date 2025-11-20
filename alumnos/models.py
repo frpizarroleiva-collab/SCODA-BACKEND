@@ -26,7 +26,7 @@ class Alumno(models.Model):
 class PersonaAutorizadaAlumno(models.Model):
 
     # -----------------------------------------------
-    # CHOICES PROFESIONALES PARA PARENTESCO
+    # CHOICES PARA PARENTESCO
     # -----------------------------------------------
     class ParentescoChoices(models.TextChoices):
         PADRE = "Padre", "Padre"
@@ -52,7 +52,7 @@ class PersonaAutorizadaAlumno(models.Model):
     )
 
     # -----------------------------------------------
-    # TIPO RELACIÓN (solo lógica interna)
+    # TIPO RELACIÓN
     # -----------------------------------------------
     tipo_relacion = models.CharField(
         max_length=80,
@@ -60,7 +60,7 @@ class PersonaAutorizadaAlumno(models.Model):
     )
 
     # -----------------------------------------------
-    # PARENTESCO (información real)
+    # PARENTESCO
     # -----------------------------------------------
     parentesco = models.CharField(
         max_length=20,
@@ -79,11 +79,11 @@ class PersonaAutorizadaAlumno(models.Model):
     # -----------------------------------------------
     def clean(self):
 
-        # 🔒 Límite de 3 personas asociadas por alumno
+        # Límite de 3 personas asociadas por alumno
         if self.alumno.relaciones_personas.count() >= 3 and not self.pk:
             raise ValidationError("Un alumno no puede tener más de 3 personas asociadas.")
 
-        # 🔒 Impedir que un ALUMNO sea apoderado/autorizado
+        # Impedir que un ALUMNO sea apoderado/autorizado
         # Si la persona tiene atributo .alumno → significa que es alumno
         if hasattr(self.persona, "alumno"):
             raise ValidationError(

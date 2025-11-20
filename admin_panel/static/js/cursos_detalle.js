@@ -1,5 +1,5 @@
 // =======================================================
-//   SCODA — GESTIÓN DETALLE DE CURSO (VERSIÓN FINAL)
+//   SCODA — GESTIÓN DETALLE DE CURSO (VERSIÓN FINAL OK)
 // =======================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -13,16 +13,19 @@ document.addEventListener("DOMContentLoaded", () => {
         "X-API-Key": SCODA_API_KEY
     };
 
-    // ------------------------- ELEMENTOS -------------------------
+    // ELEMENTOS
     const cursoNombre = document.getElementById("curso-nombre");
     const cursoNivel = document.getElementById("curso-nivel");
     const cursoEstablecimiento = document.getElementById("curso-establecimiento");
     const cursoProfesorJefe = document.getElementById("curso-profesor-jefe");
 
     const tbodyAlumnos = document.getElementById("alumnos-curso-body");
-    const inputBuscarAlumno = document.getElementById("buscar-alumno-input");
     const tbodyBuscador = document.getElementById("buscar-alumno-body");
+
+    const modalAgregar = document.getElementById("modalAgregarAlumno");
     const loader = document.getElementById("loader");
+
+    const modalAgregarBS = new bootstrap.Modal(modalAgregar);
 
     function showLoader() { loader.style.display = "flex"; }
     function hideLoader() { loader.style.display = "none"; }
@@ -31,91 +34,86 @@ document.addEventListener("DOMContentLoaded", () => {
         const div = document.getElementById("notificacion");
         div.className = `alert alert-${tipo} position-fixed top-0 end-0 m-3 shadow`;
         div.textContent = msg;
-        setTimeout(() => { div.className = ""; div.textContent = ""; }, 2500);
+        setTimeout(() => { div.className = ""; div.textContent = ""; }, 2600);
     }
 
     // =======================================================
-    //      1) CARGAR CURSO
+    // 1) CARGAR CURSO
     // =======================================================
     async function cargarCurso() {
         try {
             showLoader();
-
             const resp = await fetch(`${API_BASE_URL}/api/cursos/${CURSO_ID}`, { headers });
-            if (!resp.ok) throw new Error("No se pudo obtener datos del curso");
-
             const curso = await resp.json();
 
             cursoNombre.textContent = curso.nombre;
             cursoNivel.textContent = curso.nivel;
-            cursoEstablecimiento.textContent = curso.establecimiento?.nombre || "—";
+            cursoEstablecimiento.textContent = curso.establecimiento_nombre || "—";
 
-            await cargarProfesores(curso.profesor?.id);
+            await cargarProfesores(curso.profesor);
 
-        } catch (error) {
-            console.error(error);
-            notificar("Error al cargar información del curso", "danger");
+        } catch {
+            notificar("Error al cargar curso", "danger");
         } finally {
             hideLoader();
         }
     }
 
     // =======================================================
-    //      2) CARGAR PROFESORES
+    // 2) PROFESORES
     // =======================================================
     async function cargarProfesores(idActualProfesor) {
-        try {
-            const resp = await fetch(`${API_BASE_URL}/api/usuarios?rol=profesor`, { headers });
-            const data = await resp.json();
+        const resp = await fetch(`${API_BASE_URL}/api/personas/profesores`, { headers });
+        const lista = await resp.json();
 
-            cursoProfesorJefe.innerHTML = "";
-
-            (data.results || []).forEach(prof => {
-                const opt = document.createElement("option");
-                opt.value = prof.id;
-                opt.textContent = `${prof.persona.nombres} ${prof.persona.apellido_uno}`;
-                if (prof.id === idActualProfesor) opt.selected = true;
-                cursoProfesorJefe.appendChild(opt);
-            });
-
-        } catch (err) {
-            console.error(err);
-        }
+        cursoProfesorJefe.innerHTML = `<option value="">Sin profesor asignado</option>`;
+        lista.forEach(prof => {
+            const opt = document.createElement("option");
+            opt.value = prof.id;
+            opt.textContent = `${prof.nombres} ${prof.apellido_uno}`;
+            if (prof.id === idActualProfesor) opt.selected = true;
+            cursoProfesorJefe.appendChild(opt);
+        });
     }
 
     cursoProfesorJefe.addEventListener("change", async () => {
         try {
             showLoader();
-            const body = { profesor: cursoProfesorJefe.value };
 
-            const resp = await fetch(`${API_BASE_URL}/api/cursos/${CURSO_ID}`, {
+            const prof = cursoProfesorJefe.value || null;
+
+            await fetch(`${API_BASE_URL}/api/cursos/${CURSO_ID}`, {
                 method: "PATCH",
                 headers,
-                body: JSON.stringify(body)
+                body: JSON.stringify({ profesor: prof })
             });
 
-            if (!resp.ok) throw new Error("Error al actualizar profesor jefe");
+            notificar("Profesor Jefe actualizado");
 
-            notificar("Profesor Jefe actualizado correctamente");
-
-        } catch (err) {
-            console.error(err);
-            notificar("Error al actualizar profesor jefe", "danger");
+        } catch {
+            notificar("Error al actualizar profesor", "danger");
         } finally {
             hideLoader();
         }
     });
 
     // =======================================================
-    //      3) CARGAR ALUMNOS DEL CURSO
+    // CHIP DE ESTADO
+    // =======================================================
+    function generarChipEstado(estado) {
+        if (!estado) return `<span class="estado-chip estado-SIN">SIN REGISTRO</span>`;
+        const clase = estado.replaceAll(" ", "_").toUpperCase();
+        return `<span class="estado-chip estado-${clase}">${estado}</span>`;
+    }
+
+    // =======================================================
+    // 3) CARGAR ALUMNOS DEL CURSO
     // =======================================================
     async function cargarAlumnosCurso() {
         try {
             showLoader();
 
             const resp = await fetch(`${API_BASE_URL}/api/cursos/${CURSO_ID}/alumnos`, { headers });
-            if (!resp.ok) throw new Error("Error API alumnos curso");
-
             const data = await resp.json();
 
             tbodyAlumnos.innerHTML = "";
@@ -126,7 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${index + 1}</td>
                     <td>${al.nombre_completo}</td>
                     <td>${al.rut}</td>
-                    <td>${al.apoderado || "—"}</td>
+                    <td>${generarChipEstado(al.estado_actual)}</td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="quitarAlumno(${al.id})">
                             <i class="bi bi-x-circle"></i>
@@ -136,110 +134,123 @@ document.addEventListener("DOMContentLoaded", () => {
                 tbodyAlumnos.appendChild(tr);
             });
 
-        } catch (error) {
-            console.error(error);
-            notificar("Error al cargar alumnos del curso", "danger");
+        } catch {
+            notificar("Error al cargar alumnos", "danger");
         } finally {
             hideLoader();
         }
     }
-
     window.cargarAlumnosCurso = cargarAlumnosCurso;
 
     // =======================================================
-    //      4) QUITAR ALUMNO DEL CURSO
+    // QUITAR ALUMNO
     // =======================================================
     window.quitarAlumno = async function (alumnoId) {
-        if (!confirm("¿Seguro que deseas quitar a este alumno del curso?")) return;
+        if (!confirm("¿Seguro?")) return;
 
         try {
             showLoader();
 
-            const resp = await fetch(`${API_BASE_URL}/api/alumnos/${alumnoId}`, {
+            await fetch(`${API_BASE_URL}/api/alumnos/${alumnoId}`, {
                 method: "PATCH",
                 headers,
                 body: JSON.stringify({ curso: null })
             });
 
-            if (!resp.ok) throw new Error("Error al quitar alumno");
-
-            notificar("Alumno removido del curso");
+            notificar("Alumno quitado");
             cargarAlumnosCurso();
 
-        } catch (err) {
-            console.error(err);
-            notificar("No se pudo quitar el alumno", "danger");
+        } catch {
+            notificar("Error al quitar alumno", "danger");
         } finally {
             hideLoader();
         }
     };
 
     // =======================================================
-    //      5) BUSCAR ALUMNOS
+    // 5) BUSCAR
     // =======================================================
-    inputBuscarAlumno.addEventListener("input", () => {
-        const val = inputBuscarAlumno.value.trim();
-        if (val.length >= 2) buscarAlumno(val);
-        else tbodyBuscador.innerHTML = "";
-    });
-
     async function buscarAlumno(texto) {
-        try {
-            // 🔥 RUTA CORRECTA SIN SLASH FINAL
-            const resp = await fetch(`${API_BASE_URL}/api/alumnos?search=${texto}`, { headers });
-            if (!resp.ok) return;
+        const resp = await fetch(`${API_BASE_URL}/api/alumnos?search=${texto}`, { headers });
+        const data = await resp.json();
 
-            const data = await resp.json();
-            tbodyBuscador.innerHTML = "";
+        tbodyBuscador.innerHTML = "";
 
-            (data.results || []).forEach((al, idx) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${idx + 1}</td>
-                    <td>${al.persona.nombres} ${al.persona.apellido_uno}</td>
-                    <td>${al.persona.run}</td>
-                    <td>
-                        <button class="btn btn-success btn-sm" onclick="agregarAlumno(${al.id})">
-                            <i class="bi bi-check-circle"></i>
-                        </button>
-                    </td>
-                `;
-                tbodyBuscador.appendChild(tr);
-            });
+        (data.results || []).forEach((al, idx) => {
+            const p = al.persona;
+            const tr = document.createElement("tr");
 
-        } catch (err) {
-            console.error(err);
-        }
+            tr.innerHTML = `
+                <td>${idx + 1}</td>
+                <td>${p.nombres} ${p.apellido_uno}</td>
+                <td>${p.run}</td>
+                <td>
+                    <button class="btn btn-success btn-sm" onclick="agregarAlumno(${al.id})">
+                        <i class="bi bi-check-circle"></i>
+                    </button>
+                </td>
+            `;
+
+            tbodyBuscador.appendChild(tr);
+        });
     }
 
     // =======================================================
-    //      6) AGREGAR ALUMNO
+// 6) FIX DEFINITIVO: BUSCADOR SIN LISTENERS DUPLICADOS
+// =======================================================
+let listenerBuscar = null;
+
+modalAgregar.addEventListener("shown.bs.modal", () => {
+
+    const inputBuscarAlumno = document.getElementById("buscar-alumno-input");
+
+    // reset tabla
+    tbodyBuscador.innerHTML = "";
+    inputBuscarAlumno.value = "";
+    buscarAlumno("");
+
+    // eliminar listener anterior si existe
+    if (listenerBuscar) {
+        inputBuscarAlumno.removeEventListener("input", listenerBuscar);
+    }
+
+    // definir listener nuevo
+    listenerBuscar = () => {
+        const val = inputBuscarAlumno.value.trim();
+        if (val.length >= 2) buscarAlumno(val);
+        else tbodyBuscador.innerHTML = "";
+    };
+
+    // aplicarlo
+    inputBuscarAlumno.addEventListener("input", listenerBuscar);
+});
+
+    // =======================================================
+    // 7) AGREGAR ALUMNO
     // =======================================================
     window.agregarAlumno = async function (alumnoId) {
         try {
             showLoader();
 
-            const resp = await fetch(`${API_BASE_URL}/api/alumnos/${alumnoId}`, {
+            await fetch(`${API_BASE_URL}/api/alumnos/${alumnoId}`, {
                 method: "PATCH",
                 headers,
-                body: JSON.stringify({ curso: CURSO_ID })
+                body: JSON.stringify({ curso: parseInt(CURSO_ID) })
             });
 
-            if (!resp.ok) throw new Error("Error al agregar alumno");
-
-            notificar("Alumno agregado al curso correctamente");
+            notificar("Alumno agregado");
+            modalAgregarBS.hide();
             cargarAlumnosCurso();
 
-        } catch (err) {
-            console.error(err);
-            notificar("Error agregando alumno", "danger");
+        } catch {
+            notificar("Error al agregar alumno", "danger");
         } finally {
             hideLoader();
         }
     };
 
     // =======================================================
-    //      INICIO
+    // INICIO
     // =======================================================
     cargarCurso();
     cargarAlumnosCurso();

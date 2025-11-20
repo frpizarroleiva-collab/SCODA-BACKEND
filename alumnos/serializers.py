@@ -47,13 +47,13 @@ class AlumnoSerializer(serializers.ModelSerializer):
         persona = validated_data.pop("persona")
         personas_autorizadas = validated_data.pop("personas_autorizadas", [])
 
-        # 1. No permitir que un apoderado sea alumno
+        #No permitir que un apoderado sea alumno
         if persona.autorizaciones.exists():
             raise serializers.ValidationError(
                 {"persona": "Esta persona ya es APODERADO y no puede ser alumno."}
             )
 
-        # 2. Crear alumno
+        #Crear alumno
         try:
             alumno = Alumno.objects.create(persona=persona, **validated_data)
         except IntegrityError:
@@ -61,13 +61,13 @@ class AlumnoSerializer(serializers.ModelSerializer):
                 {"persona": "El RUN ya existe y pertenece a otra persona."}
             )
 
-        # 3. Validar máximo 3 autorizados
+        #Validar máximo 3 autorizados
         if len(personas_autorizadas) > 3:
             raise serializers.ValidationError(
                 {"personas_autorizadas": "Máximo 3 personas autorizadas por alumno."}
             )
 
-        # 4. Crear autorizados
+        #Crear autorizados
         for aut_data in personas_autorizadas:
 
             persona_id = aut_data.get("persona")
@@ -108,7 +108,7 @@ class AlumnoSerializer(serializers.ModelSerializer):
         return alumno
 
     # ------------------------------------------------------------
-    # REPRESENTACIÓN DEL ALUMNO COMPLETA
+    # REPRESENTACIÓN DEL ALUMNO
     # ------------------------------------------------------------
     def to_representation(self, instance):
         data = super().to_representation(instance)

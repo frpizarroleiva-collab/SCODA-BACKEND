@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="{% static 'css/cursos.css' %}">
 
     <style>
-        /* -------- COLORES Y ESTILO GENERAL -------- */
         .card-header {
             background-color: #198754;
             color: #fff;
@@ -27,7 +26,7 @@
         .btn-remove { background-color: #dc3545; color: #fff; }
         .btn-back { background-color: #6c757d; color: #fff; }
 
-        /* -------- LOADER -------- */
+        /* LOADER */
         #loader {
             position: fixed;
             inset: 0;
@@ -39,6 +38,68 @@
             font-weight: 600;
             font-size: 17px;
         }
+
+        /* CHIP DE ESTADO */
+        .estado-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .estado-AUSENTE { background:#dc3545; color:white; }
+        .estado-RETIRADO { background:#6f42c1; color:white; }
+        .estado-EXTENSION { background:#0d6efd; color:white; }
+        .estado-SIN { background:#6c757d; color:white; }
+
+          /* ======== CHIP BASE ======== */
+    .estado-chip {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+        display: inline-block;
+    }
+
+    /* ======== ESTADOS ======== */
+
+    /* SIN REGISTRO */
+    .estado-SIN,
+    .estado-SIN_REGISTRO {
+        background-color: #6c757d; /* Gris */
+    }
+
+    /* AUSENTE */
+    .estado-AUSENTE {
+        background-color: #dc3545; /* Rojo */
+    }
+
+    /* EXTENSIÓN */
+    .estado-EXTENSION {
+        background-color: #6f42c1; /* Morado */
+    }
+
+    /* ANTICIPADO */
+    .estado-ANTICIPADO {
+        background-color: #ffc107; /* Amarillo */
+        color: black !important;
+    }
+
+    /* RETIRADO */
+    .estado-RETIRADO {
+        background-color: #198754; /* Verde SCODA */
+    }
+
+    /* === FIX MODAL PARA MOSTRAR RESULTADOS === */
+    .modal-dialog {
+        max-height: 90vh;
+    }
+
+    .modal-body {
+        overflow-y: auto !important;
+        max-height: 70vh;
+    }
     </style>
 </head>
 
@@ -61,9 +122,7 @@
 
     <!-- INFO DEL CURSO -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header fw-bold">
-            Información del Curso
-        </div>
+        <div class="card-header fw-bold">Información del Curso</div>
         <div class="card-body">
             <div class="row g-3">
 
@@ -108,10 +167,11 @@
                             <th>#</th>
                             <th>Nombre</th>
                             <th>RUN</th>
-                            <th>Apoderado</th>
+                            <th>Estado</th><!-- CAMBIO AQUÍ -->
                             <th>Acciones</th>
                         </tr>
                     </thead>
+
                     <tbody id="alumnos-curso-body"></tbody>
                 </table>
             </div>
@@ -133,13 +193,11 @@
 
             <div class="modal-body">
 
-                <!-- Buscador -->
                 <div class="mb-3">
                     <label class="fw-bold text-success">Buscar alumno por nombre o RUN:</label>
                     <input type="text" id="buscar-alumno-input" class="form-control" placeholder="Ej: Juan Pérez">
                 </div>
 
-                <!-- Resultados -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle text-center">
                         <thead>

@@ -54,7 +54,7 @@ class Comuna(models.Model):
 
 
 # ============================
-#       DIRECCIÓN (NUEVA)
+#       DIRECCIÓN
 # ============================
 class Direccion(models.Model):
     calle = models.CharField(max_length=255)

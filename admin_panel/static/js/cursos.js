@@ -1,5 +1,5 @@
 // ===============================================================
-//  JS - GESTIÓN DE CURSOS (Panel SCODA)
+//  JS - GESTIÓN DE CURSOS (Panel SCODA) - VERSIÓN FINAL CORREGIDA
 // ===============================================================
 
 const { API_BASE_URL, SCODA_API_KEY, ACCESS_TOKEN } = window.SCODA_CONFIG;
@@ -37,7 +37,7 @@ function notificar(mensaje, tipo = "success") {
 }
 
 // ---------------------------------------------------------------
-//  CARGAR SELECTS (profesores y establecimientos)
+//  CARGAR SELECTS
 // ---------------------------------------------------------------
 async function cargarSelects() {
     try {
@@ -53,7 +53,6 @@ async function cargarSelects() {
         const estSelect = document.getElementById("establecimiento");
 
         profesorSelect.innerHTML = `<option value="">Sin profesor asignado</option>`;
-
         profesores.forEach((p) => {
             profesorSelect.innerHTML += `<option value="${p.id}">${p.nombres} ${p.apellido_uno}</option>`;
         });
@@ -62,8 +61,9 @@ async function cargarSelects() {
         establecimientos.forEach((e) => {
             estSelect.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
         });
+
     } catch (error) {
-        console.error("Error al cargar selects:", error);
+        console.error(error);
         notificar("Error al cargar listas de selección.", "danger");
     }
 }
@@ -92,36 +92,29 @@ async function cargarCursos() {
                     <td>${c.nivel}</td>
                     <td>${c.profesor_nombre || "—"}</td>
                     <td>${c.establecimiento_nombre || "—"}</td>
-                    <td>
-                        <input type="time" id="inicio-${c.id}" class="form-control form-control-sm"
-                            value="${inicio}">
-                    </td>
-                    <td>
-                        <input type="time" id="termino-${c.id}" class="form-control form-control-sm"
-                            value="${termino}">
-                    </td>
+
+                    <td><input type="time" id="inicio-${c.id}" class="form-control form-control-sm" value="${inicio}"></td>
+                    <td><input type="time" id="termino-${c.id}" class="form-control form-control-sm" value="${termino}"></td>
 
                     <td>
                         <button class="btn btn-primary btn-sm me-1" onclick="actualizarHorario(${c.id})">
                             <i class="bi bi-save"></i>
                         </button>
-                        
                         <button class="btn btn-info btn-sm me-1" onclick="irDetalleCurso(${c.id})">
                             <i class="bi bi-people"></i>
                         </button>
-
                         <button class="btn btn-warning btn-sm me-1" onclick="editarCurso(${c.id})">
                             <i class="bi bi-pencil"></i>
                         </button>
-
                         <button class="btn btn-danger btn-sm" onclick="eliminarCurso(${c.id})">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
                 </tr>`;
         });
+
     } catch (error) {
-        console.error("Error al cargar cursos:", error);
+        console.error(error);
         notificar("Error al cargar cursos.", "danger");
     } finally {
         mostrarLoader(false);
@@ -129,7 +122,7 @@ async function cargarCursos() {
 }
 
 // ---------------------------------------------------------------
-//  IR A DETALLE DEL CURSO (NUEVO)
+//  DETALLE DE CURSO
 // ---------------------------------------------------------------
 function irDetalleCurso(id) {
     window.location.href = `/panel/cursos/${id}/`;
@@ -148,13 +141,11 @@ async function actualizarHorario(id) {
             headers: getHeaders(),
             body: JSON.stringify({ hora_inicio, hora_termino }),
         });
-        const data = await res.json();
 
-        if (res.ok) {
-            notificar("Horario actualizado correctamente.");
-        } else {
-            notificar(data.error || "Error al actualizar horario.", "danger");
-        }
+        const data = await res.json();
+        if (res.ok) notificar("Horario actualizado correctamente.");
+        else notificar(data.error || "Error al actualizar horario.", "danger");
+
     } catch (error) {
         console.error(error);
         notificar("Error al guardar horario.", "danger");
@@ -162,7 +153,7 @@ async function actualizarHorario(id) {
 }
 
 // ---------------------------------------------------------------
-//  ABRIR Y EDITAR CURSO (Modal)
+//  ABRIR MODAL
 // ---------------------------------------------------------------
 function abrirModal(curso = null) {
     const modal = new bootstrap.Modal(document.getElementById("modalCurso"));
@@ -173,13 +164,20 @@ function abrirModal(curso = null) {
     if (curso) {
         document.getElementById("nombre").value = curso.nombre;
         document.getElementById("nivel").value = curso.nivel;
-        document.getElementById("profesor").value = curso.profesor || "";
-        document.getElementById("establecimiento").value = curso.establecimiento || "";
+
+        document.getElementById("profesor").value =
+            curso.profesor ? curso.profesor : "";
+
+        document.getElementById("establecimiento").value =
+            curso.establecimiento_obj ? curso.establecimiento_obj.id : "";
     }
 
     modal.show();
 }
 
+// ---------------------------------------------------------------
+//  EDITAR (CARGA EL CURSO ANTES DEL MODAL)
+// ---------------------------------------------------------------
 async function editarCurso(id) {
     try {
         const res = await fetch(`${API_URL}/${id}`, { headers: getHeaders() });
@@ -190,35 +188,47 @@ async function editarCurso(id) {
     }
 }
 
+// ---------------------------------------------------------------
+//  GUARDAR (CREATE = POST, UPDATE = PATCH) 🔥🔥🔥
+// ---------------------------------------------------------------
 async function guardarCurso(e) {
     e.preventDefault();
 
     const id = document.getElementById("cursoIdHidden").value;
-    const method = id ? "PUT" : "POST";
+
+    // CAMBIO CRÍTICO → usar PATCH en update
+    const method = id ? "PATCH" : "POST";
     const url = id ? `${API_URL}/${id}` : API_URL;
 
-    const curso = {
+    const profesorRaw = document.getElementById("profesor").value;
+    const establecimientoRaw = document.getElementById("establecimiento").value;
+
+    const payload = {
         nombre: document.getElementById("nombre").value,
         nivel: parseInt(document.getElementById("nivel").value),
-        profesor: document.getElementById("profesor").value || null,
-        establecimiento: parseInt(document.getElementById("establecimiento").value),
     };
+
+    if (profesorRaw !== "") payload.profesor = parseInt(profesorRaw);
+    if (establecimientoRaw !== "") payload.establecimiento = parseInt(establecimientoRaw);
 
     try {
         const res = await fetch(url, {
             method,
             headers: getHeaders(),
-            body: JSON.stringify(curso),
+            body: JSON.stringify(payload),
         });
 
-        if (res.ok) {
-            notificar("Curso guardado correctamente.");
-            bootstrap.Modal.getInstance(document.getElementById("modalCurso")).hide();
-            cargarCursos();
-        } else {
-            const data = await res.json();
+        const data = await res.json();
+
+        if (!res.ok) {
             notificar(data.detail || "Error al guardar curso.", "danger");
+            return;
         }
+
+        notificar("Curso guardado correctamente.");
+        bootstrap.Modal.getInstance(document.getElementById("modalCurso")).hide();
+        cargarCursos();
+
     } catch (error) {
         console.error(error);
         notificar("Error general al guardar curso.", "danger");

@@ -3,7 +3,6 @@ from .models import Establecimiento
 
 
 class EstablecimientoSerializer(serializers.ModelSerializer):
-    # NUEVO — objeto expandido (NO ROMPE NADA)
     direccion_obj = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
