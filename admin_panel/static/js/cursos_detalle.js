@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =======================================================
-    // 1) CARGAR CURSO
+    // CARGAR CURSO
     // =======================================================
     async function cargarCurso() {
         try {
@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =======================================================
-    // 2) PROFESORES
+    // PROFESORES
     // =======================================================
     async function cargarProfesores(idActualProfesor) {
         const resp = await fetch(`${API_BASE_URL}/api/personas/profesores`, { headers });
@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =======================================================
-    // 3) CARGAR ALUMNOS DEL CURSO
+    // CARGAR ALUMNOS DEL CURSO
     // =======================================================
     async function cargarAlumnosCurso() {
         try {
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             tbodyAlumnos.innerHTML = "";
 
-            (data.results || []).forEach((al, index) => {
+            (data.results || data || []).forEach((al, index) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${index + 1}</td>
@@ -168,35 +168,36 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // =======================================================
-    // 5) BUSCAR
+    // BUSCAR
     // =======================================================
-    async function buscarAlumno(texto) {
-        const resp = await fetch(`${API_BASE_URL}/api/alumnos?search=${texto}`, { headers });
-        const data = await resp.json();
+   async function buscarAlumno(texto) {
+    const resp = await fetch(`${API_BASE_URL}/api/alumnos?search=${texto}`, { headers });
+    const data = await resp.json();
 
-        tbodyBuscador.innerHTML = "";
+    tbodyBuscador.innerHTML = "";
 
-        (data.results || []).forEach((al, idx) => {
-            const p = al.persona;
-            const tr = document.createElement("tr");
+    // FIX DEFINITIVO: aceptar results O array directo
+    (data.results || data || []).forEach((al, idx) => {
 
-            tr.innerHTML = `
-                <td>${idx + 1}</td>
-                <td>${p.nombres} ${p.apellido_uno}</td>
-                <td>${p.run}</td>
-                <td>
-                    <button class="btn btn-success btn-sm" onclick="agregarAlumno(${al.id})">
-                        <i class="bi bi-check-circle"></i>
-                    </button>
-                </td>
-            `;
+        const p = al.persona_detalle;  // TU API usa persona_detalle
+        const tr = document.createElement("tr");
 
-            tbodyBuscador.appendChild(tr);
-        });
-    }
+        tr.innerHTML = `
+            <td>${idx + 1}</td>
+            <td>${p.nombres} ${p.apellido_uno}</td>
+            <td>${p.run}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="agregarAlumno(${al.id})">
+                    <i class="bi bi-check-circle"></i>
+                </button>
+            </td>
+        `;
+        tbodyBuscador.appendChild(tr);
+    });
+}
 
-    // =======================================================
-// 6) FIX DEFINITIVO: BUSCADOR SIN LISTENERS DUPLICADOS
+// =======================================================
+// FIX DEFINITIVO: BUSCADOR SIN LISTENERS DUPLICADOS
 // =======================================================
 let listenerBuscar = null;
 
@@ -216,9 +217,15 @@ modalAgregar.addEventListener("shown.bs.modal", () => {
 
     // definir listener nuevo
     listenerBuscar = () => {
-        const val = inputBuscarAlumno.value.trim();
-        if (val.length >= 2) buscarAlumno(val);
-        else tbodyBuscador.innerHTML = "";
+    const val = inputBuscarAlumno.value.trim();
+
+        // Buscar desde 1 letra
+        if (val.length >= 1) {
+            buscarAlumno(val);
+        } else {
+            // si está vacío, cargar todos
+            buscarAlumno("");
+        }
     };
 
     // aplicarlo
@@ -226,7 +233,7 @@ modalAgregar.addEventListener("shown.bs.modal", () => {
 });
 
     // =======================================================
-    // 7) AGREGAR ALUMNO
+    //AGREGAR ALUMNO
     // =======================================================
     window.agregarAlumno = async function (alumnoId) {
         try {

@@ -1,5 +1,5 @@
 // ======================================
-// DASHBOARD.JS — SCODA (VERSIÓN FINAL)
+// DASHBOARD.JS — SCODA (VERSIÓN FINAL OPTIMIZADA)
 // ======================================
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -18,10 +18,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // MENSAJE DE ÉXITO LOGIN
     // ------------------------------
     const params = new URLSearchParams(window.location.search);
+
     if (params.get("status") === "success") {
         const msg = document.getElementById("status-message");
         if (msg) msg.classList.remove("d-none");
-    }
+    params.delete("status");
+    const newUrl = window.location.pathname + (params.toString() ? "?" + params : "");
+    window.history.replaceState({}, "", newUrl);
+}
+
 
     // ------------------------------
     // CONFIG GLOBAL TOKENS
@@ -44,12 +49,15 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // ============================================================
-    // FORMATEAR FECHAS (DD/MM/AAAA)
-    // ============================================================
-    function formatearFecha(fechaIso) {
-        const fecha = new Date(fechaIso);
-        return fecha.toLocaleDateString("es-CL", {
+    // =======================
+    // FORMATEAR FECHA SEGURA
+    // =======================
+    function formatearFechaSegura(fechaIso) {
+        if (!fechaIso) return "—";
+        const f = new Date(fechaIso);
+        if (isNaN(f.getTime())) return "—";
+
+        return f.toLocaleDateString("es-CL", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric"
@@ -57,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 1. CARGAR LISTA DE CURSOS PARA EL FILTRO
+    // CARGAR LISTA DE CURSOS
     // ============================================================
     async function cargarCursos() {
         try {
@@ -82,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
     cargarCursos();
 
     // ============================================================
-    // 2. CARGAR TARJETAS (Resumen general)
+    // CARGAR TARJETAS
     // ============================================================
     async function cargarTarjetas(cursoId = "") {
         try {
@@ -108,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const totalAus = aus?.total_ausentes ?? 0;
             const totalExt = ext?.total_extension ?? 0;
-            const totalAnt = ant?.total_retiros_anticipados ?? ant?.total_anticipados ?? 0;
+            const totalAnt = ant?.total_retiros_anticipados ?? 0;
             const totalRet = ret?.total_retiros ?? 0;
 
             document.getElementById("ausentes-count").textContent = totalAus;
@@ -129,22 +137,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 2.1 PORCENTAJE DE ASISTENCIA DIARIA (solo AUSENTES)
+    // PORCENTAJE DE ASISTENCIA
     // ============================================================
     async function cargarPorcentajeAsistencia(cursoId = "") {
         try {
             const q = cursoId ? `?curso_id=${cursoId}` : "";
 
-            const totalAlumnos = await fetch(`${BASE}/api/alumnos${q}`, {
+            const alumnos = await fetch(`${BASE}/api/alumnos${q}`, {
                 headers: getHeaders()
-            }).then(r => r.json()).then(d => d.length);
+            }).then(r => r.json());
 
-            // SOLO descontar AUSENTES
-            const totalAusentes = await fetch(`${BASE}/api/estado-alumnos/ausentes${q}`, {
+            const totalAlumnos = alumnos.length;
+
+            const ausentes = await fetch(`${BASE}/api/estado-alumnos/ausentes${q}`, {
                 headers: getHeaders()
-            }).then(r => r.json()).then(d => d.total_ausentes ?? 0);
+            }).then(r => r.json());
 
-            const presentes = totalAlumnos - totalAusentes;
+            const totalAus = ausentes.total_ausentes ?? 0;
+
+            const presentes = totalAlumnos - totalAus;
 
             const porcentaje = totalAlumnos > 0
                 ? ((presentes / totalAlumnos) * 100).toFixed(1)
@@ -162,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 3. LISTADOS RÁPIDOS
+    // LISTADOS RÁPIDOS
     // ============================================================
     async function cargarListadosRapidos(cursoId = "") {
         const q = cursoId ? `?curso_id=${cursoId}` : "";
@@ -194,11 +205,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 (data.alumnos || []).slice(0, 5).forEach(item => {
                     const li = document.createElement("li");
                     li.className = "list-group-item";
+
                     li.innerHTML = `
                         <strong>${item.alumno_nombre}</strong><br>
                         <small>${item.curso_nombre || ""}</small><br>
-                        <small class="text-muted">${formatearFecha(item.hora_registro)}</small>
+                        <small class="text-muted">${item.hora_registro || "--"}</small>
                     `;
+
                     lista.appendChild(li);
                 });
 
@@ -209,7 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 4. GRÁFICO
+    // GRÁFICO
     // ============================================================
     let chartEstados = null;
 
@@ -243,26 +256,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // 5. CARGAR TODO (con loader)
+    // CARGAR TODO (con opción de auto refresco sin loader)
     // ============================================================
-    async function cargarTodo() {
-        showLoader();
+    async function cargarTodo(auto = false) {
+        if (!auto) showLoader();
+
         const cursoSel = document.getElementById("filtro-curso").value;
 
         await cargarTarjetas(cursoSel);
         await cargarPorcentajeAsistencia(cursoSel);
         await cargarListadosRapidos(cursoSel);
 
-        hideLoader();
+        if (!auto) hideLoader();
     }
 
     cargarTodo();
 
     // ============================================================
-    // 6. FILTRO POR CURSO
+    // FILTRO POR CURSO
     // ============================================================
     document.getElementById("filtro-curso").addEventListener("change", () => {
         cargarTodo();
     });
+
+    // ============================================================
+    // AUTO-REFRESH CADA 60 SEGUNDOS (sin loader)
+    // ============================================================
+    setInterval(() => {
+        cargarTodo(true); // refresco silencioso sin loader
+    }, 60000);
 
 });

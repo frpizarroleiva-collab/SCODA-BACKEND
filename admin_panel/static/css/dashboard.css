@@ -77,14 +77,14 @@ NUEVAS TARJETAS SCODA APP
 }
 
 /* =============================
-   📊 GRÁFICO (Chart.js)
+GRÁFICO (Chart.js)
 ============================= */
 #grafico-estados {
     max-height: 300px;
 }
 
 /* =============================
-   📋 LISTADOS RÁPIDOS
+LISTADOS RÁPIDOS
 ============================= */
 .list-group small {
     font-size: 13px;

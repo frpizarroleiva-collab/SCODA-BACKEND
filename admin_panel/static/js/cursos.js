@@ -1,6 +1,6 @@
-// ===============================================================
-//  JS - GESTIÓN DE CURSOS (Panel SCODA) - VERSIÓN FINAL CORREGIDA
-// ===============================================================
+// ==================
+// GESTIÓN DE CURSOS
+// ==================
 
 const { API_BASE_URL, SCODA_API_KEY, ACCESS_TOKEN } = window.SCODA_CONFIG;
 const API_URL = `${API_BASE_URL}/api/cursos`;
@@ -175,9 +175,9 @@ function abrirModal(curso = null) {
     modal.show();
 }
 
-// ---------------------------------------------------------------
-//  EDITAR (CARGA EL CURSO ANTES DEL MODAL)
-// ---------------------------------------------------------------
+// ---------
+//  EDITAR
+// ---------
 async function editarCurso(id) {
     try {
         const res = await fetch(`${API_URL}/${id}`, { headers: getHeaders() });
@@ -188,15 +188,13 @@ async function editarCurso(id) {
     }
 }
 
-// ---------------------------------------------------------------
-//  GUARDAR (CREATE = POST, UPDATE = PATCH) 🔥🔥🔥
-// ---------------------------------------------------------------
+// -----------------------------------------
+//  GUARDAR (CREATE = POST, UPDATE = PATCH)
+// -----------------------------------------
 async function guardarCurso(e) {
     e.preventDefault();
 
     const id = document.getElementById("cursoIdHidden").value;
-
-    // CAMBIO CRÍTICO → usar PATCH en update
     const method = id ? "PATCH" : "POST";
     const url = id ? `${API_URL}/${id}` : API_URL;
 
@@ -235,9 +233,9 @@ async function guardarCurso(e) {
     }
 }
 
-// ---------------------------------------------------------------
+// ----------------
 //  ELIMINAR CURSO
-// ---------------------------------------------------------------
+// ----------------
 function eliminarCurso(id) {
     if (!confirm("¿Seguro que deseas eliminar este curso?")) return;
 
@@ -254,9 +252,9 @@ function eliminarCurso(id) {
     });
 }
 
-// ---------------------------------------------------------------
+// -------------
 //  INICIALIZAR
-// ---------------------------------------------------------------
+// -------------
 document.addEventListener("DOMContentLoaded", () => {
     cargarSelects().then(cargarCursos);
 });

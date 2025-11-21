@@ -1,6 +1,6 @@
-// =============================
+// =======================================================
 // CONFIG GLOBAL
-// =============================
+// =======================================================
 const { API_BASE_URL, SCODA_API_KEY, ACCESS_TOKEN } = window.SCODA_CONFIG || {};
 const API_URL = `${API_BASE_URL}/api/usuarios`;
 
@@ -11,69 +11,41 @@ function getHeaders() {
     return {
         "Content-Type": "application/json",
         "Authorization": token ? `Bearer ${token}` : "",
-        "X-API-KEY": SCODA_API_KEY,
+        "X-API-Key": SCODA_API_KEY,
     };
 }
 
-// =============================
-// ELEMENTOS Y UTILIDADES
-// =============================
-const loader = document.getElementById("loader");
-const loaderText = document.getElementById("loader-text");
+// =======================================================
+// LOADER GLOBAL
+// =======================================================
+function showLoader(text = "Cargando...") {
+    document.getElementById("loader-text").textContent = text;
+    document.getElementById("loader").classList.add("show");
+}
+
+function hideLoader() {
+    document.getElementById("loader").classList.remove("show");
+}
+
+// =======================================================
+// TOAST NOTIFICACIÓN
+// =======================================================
+function showToast(msg, type = "success") {
+    const toast = document.getElementById("notificacion");
+    if (!toast) return;
+
+    toast.style.background = type === "error" ? "#dc3545" : "#198754";
+    toast.textContent = msg;
+    toast.style.display = "block";
+
+    setTimeout(() => (toast.style.display = "none"), 3200);
+}
+
+// =======================================================
+// MODAL
+// =======================================================
 const modal = new bootstrap.Modal(document.getElementById("modalUsuario"));
 
-function showLoader(show, text = "Cargando...") {
-    if (loaderText) loaderText.textContent = text;
-    loader.style.display = show ? "flex" : "none";
-}
-
-// =============================
-// CARGAR USUARIOS
-// =============================
-async function cargarUsuarios() {
-    showLoader(true, "Cargando usuarios...");
-    try {
-        const res = await fetch(API_URL, { headers: getHeaders() });
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-
-        const rawData = await res.json();
-        let data = Array.isArray(rawData) ? rawData : rawData.results || [];
-
-        // ORDENAR SIEMPRE POR ID ASCENDENTE
-        data.sort((a, b) => a.id - b.id);
-
-        const tbody = document.querySelector("#usuarios-table tbody");
-        tbody.innerHTML = data
-            .map(
-                (u, i) => `
-            <tr>
-                <td>${i + 1}</td> <!-- Correlativo visual -->
-                <td>${u.first_name || ""} ${u.last_name || ""}</td>
-                <td>${u.email}</td>
-                <td>${u.rol.toUpperCase()}</td>
-                <td>${u.is_active ? "Sí" : "No"}</td>
-                <td>
-                    <button class="btn btn-warning btn-sm me-1" onclick="editarUsuario('${u.email}')">
-                        <i class="bi bi-pencil-square"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.email}')">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>`
-            )
-            .join("");
-    } catch (err) {
-        console.error("Error al cargar usuarios:", err);
-        alert("No se pudieron cargar los usuarios. Verifica token o API Key.");
-    } finally {
-        showLoader(false);
-    }
-}
-
-// =============================
-// MODAL
-// =============================
 function abrirModal(usuario = null) {
     document.getElementById("usuarioForm").reset();
     document.getElementById("usuarioEmailHidden").value = usuario?.email || "";
@@ -92,22 +64,67 @@ function abrirModal(usuario = null) {
     modal.show();
 }
 
-// =============================
+// =======================================================
+// CARGAR USUARIOS
+// =======================================================
+async function cargarUsuarios() {
+    showLoader("Cargando usuarios...");
+
+    try {
+        const res = await fetch(API_URL, { headers: getHeaders() });
+        if (!res.ok) throw new Error("No se pudo obtener usuarios");
+
+        const raw = await res.json();
+        const data = Array.isArray(raw) ? raw : raw.results || [];
+
+        data.sort((a, b) => a.id - b.id);
+
+        const tbody = document.querySelector("#usuarios-table tbody");
+        tbody.innerHTML = data
+            .map(
+                (u, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${u.first_name} ${u.last_name}</td>
+                    <td>${u.email}</td>
+                    <td>${u.rol.toUpperCase()}</td>
+                    <td>${u.is_active ? "Sí" : "No"}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm me-1" onclick="editarUsuario('${u.email}')">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.email}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `
+            )
+            .join("");
+    } catch (err) {
+        showToast(err.message, "error");
+    } finally {
+        hideLoader();
+    }
+}
+
+// =======================================================
 // GUARDAR (CREATE / UPDATE)
-// =============================
+// =======================================================
 async function guardarUsuario(e) {
     e.preventDefault();
-    showLoader(true, "Guardando usuario...");
+    showLoader("Guardando usuario...");
 
     const emailHidden = document.getElementById("usuarioEmailHidden").value;
     const email = document.getElementById("email").value.trim();
-    const url = emailHidden ? `${API_URL}/${encodeURIComponent(emailHidden)}` : API_URL;
+
+    const url = emailHidden ? `${API_URL}/${emailHidden}` : API_URL;
     const method = emailHidden ? "PUT" : "POST";
 
     try {
         const usuario = {
-            first_name: document.getElementById("first_name").value || "SinNombre",
-            last_name: document.getElementById("last_name").value || "SinApellido",
+            first_name: document.getElementById("first_name").value,
+            last_name: document.getElementById("last_name").value,
             email,
             rol: document.getElementById("rol").value,
             is_active: document.getElementById("activo").value === "true",
@@ -120,85 +137,69 @@ async function guardarUsuario(e) {
             body: JSON.stringify(usuario),
         });
 
-        let data = null;
-        if (res.headers.get("content-length") !== "0" && res.status !== 204) {
-            try {
-                data = await res.json();
-            } catch {
-                data = null;
-            }
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.detail || "No se pudo guardar el usuario");
         }
 
-        if (res.status === 204 || res.status === 200 || res.status === 201) {
-            alert("Usuario guardado correctamente.");
-            modal.hide();
-            await cargarUsuarios();
-        } else if (!res.ok) {
-            console.error("Error de respuesta:", data);
-            throw new Error(data?.email?.[0] || data?.detail || `Error ${res.status}`);
-        }
+        modal.hide();
+        await cargarUsuarios();
+        showToast("Usuario guardado correctamente.");
+
     } catch (err) {
-        console.error("Error general:", err);
-        alert(err.message || "No se pudo guardar el usuario.");
+        showToast(err.message, "error");
     } finally {
-        showLoader(false);
+        hideLoader();
     }
 }
 
-// =============================
+// =======================================================
 // EDITAR
-// =============================
+// =======================================================
 async function editarUsuario(email) {
-    showLoader(true, "Cargando usuario...");
+    showLoader("Cargando usuario...");
+
     try {
-        const res = await fetch(`${API_URL}/${encodeURIComponent(email)}`, {
-            headers: getHeaders(),
-        });
+        const res = await fetch(`${API_URL}/${email}`, { headers: getHeaders() });
         if (!res.ok) throw new Error("Usuario no encontrado");
+
         const usuario = await res.json();
         abrirModal(usuario);
+
     } catch (err) {
-        alert("No se pudo obtener el usuario: " + err.message);
+        showToast(err.message, "error");
     } finally {
-        showLoader(false);
+        hideLoader();
     }
 }
 
-// =============================
+// =======================================================
 // ELIMINAR
-// =============================
+// =======================================================
 async function eliminarUsuario(email) {
     if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
 
-    showLoader(true, "Eliminando usuario...");
+    showLoader("Eliminando usuario...");
+
     try {
-        const res = await fetch(`${API_URL}/${encodeURIComponent(email)}`, {
+        const res = await fetch(`${API_URL}/${email}`, {
             method: "DELETE",
             headers: getHeaders(),
         });
 
-        if (res.status === 204) {
-            alert("Usuario eliminado correctamente.");
-            await cargarUsuarios();
-        } else {
-            const data = await res.json();
-            throw new Error(data?.detail || "Error al eliminar usuario.");
-        }
+        if (res.status !== 204) throw new Error("No se pudo eliminar");
+
+        await cargarUsuarios();
+        showToast("Usuario eliminado.");
+
     } catch (err) {
-        alert(err.message);
+        showToast(err.message, "error");
     } finally {
-        showLoader(false);
+        hideLoader();
     }
 }
 
-// =============================
-// VOLVER AL DASHBOARD
-// =============================
-function volverDashboard() {
-    window.location.href = "/panel/dashboard/";
-}
-
-// =============================
-// INICIALIZACIÓN
-// =============================
+// =======================================================
+// INICIO
+// =======================================================
 cargarUsuarios();

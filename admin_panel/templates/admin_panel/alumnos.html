@@ -1,117 +1,83 @@
-<!-- PRUEBA #1 -->
+{% extends "admin_panel/base_admin.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestión de Alumnos | SCODA</title>
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+{% block title %}Gestión de Alumnos | SCODA{% endblock %}
 
-    <!-- Estilos SCODA -->
+{% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/usuarios.css' %}">
     <link rel="stylesheet" href="{% static 'css/alumnos.css' %}">
-</head>
+{% endblock %}
 
-<body class="d-flex flex-column min-vh-100" data-theme="light">
+{% block content %}
 
-    <!-- Encabezado -->
-    <header class="bg-success text-white d-flex justify-content-between align-items-center px-4 py-3 shadow-sm">
-        <h4 class="m-0 fw-bold">
-            <i class="bi bi-mortarboard me-2"></i> Gestión de Alumnos
-        </h4>
-        <button class="btn btn-light btn-sm fw-semibold" onclick="volverDashboard()">
-            <i class="bi bi-arrow-left-circle me-1"></i> Volver
-        </button>
-    </header>
+<div class="container py-4">
 
-    <!-- Contenido principal -->
-    <main class="container py-4 flex-grow-1">
+    <!-- Título + Buscador + Botón -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="text-success fw-bold mb-0">
+            <i class="bi bi-people-fill me-2"></i> Listado de Alumnos
+        </h5>
 
-        <!-- Título + Buscador + Botón -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-success fw-bold mb-0">
-                <i class="bi bi-people-fill me-2"></i> Listado de Alumnos
-            </h5>
+        <div class="d-flex gap-2 align-items-center">
 
-            <div class="d-flex gap-2 align-items-center">
+            <!-- Buscador rápido -->
+            <input 
+                type="text"
+                id="buscadorAlumnos"
+                class="form-control form-control-sm"
+                placeholder="Buscar alumno..."
+                style="max-width: 260px;"
+            >
 
-                <!-- Buscador rápido -->
-                <input 
-                    type="text"
-                    id="buscadorAlumnos"
-                    class="form-control form-control-sm"
-                    placeholder="Buscar alumno..."
-                    style="max-width: 260px;"
-                >
+            <!-- Botón agregar familia -->
+            <button id="btnAbrirModal" class="btn btn-success btn-sm d-flex align-items-center">
+                <i class="bi bi-person-plus me-1"></i><span>Agregar Familia</span>
+            </button>
 
-
-                <!-- Botón agregar familia -->
-               <button id="btnAbrirModal" class="btn btn-success btn-sm d-flex align-items-center">
-                    <i class="bi bi-person-plus me-1"></i><span>Agregar Familia</span>
-               </button>
-
-
-            </div>
         </div>
-
-        <!-- Tabla -->
-        <div class="table-responsive shadow-sm">
-            <table class="table table-hover align-middle" id="tablaAlumnos">
-                <thead class="table-success text-center">
-                    <tr>
-                        <th>#</th>
-                        <th>RUN</th>
-                        <th>Nombre</th>
-                        <th>Curso</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="text-center">
-                    <!-- contenido dinámico -->
-                </tbody>
-            </table>
-        </div>
-
-    </main>
-
-    <!-- Modales fuera del main -->
-    {% include "admin_panel/includes/alumnos_modales.html" %}
-    {% include "admin_panel/includes/alumnos_detalle_modal.html" %}
-
-    <!-- Footer -->
-    {% include "admin_panel/includes/footer.html" %}
-
-    <!-- Notificación flotante -->
-    <div id="notificacion"></div>
-
-    <!-- Loader global -->
-    <div id="loader">
-        <div class="spinner-border text-success" role="status"></div>
-        Cargando...
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Tabla -->
+    <div class="table-responsive shadow-sm">
+        <table class="table table-hover align-middle" id="tablaAlumnos">
+            <thead class="table-success text-center">
+                <tr>
+                    <th>#</th>
+                    <th>RUN</th>
+                    <th>Nombre</th>
+                    <th>Curso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="text-center">
+                <!-- contenido dinámico -->
+            </tbody>
+        </table>
+    </div>
 
-    <!-- SCODA CONFIG -->
+</div>
+
+<!-- Modales -->
+{% include "admin_panel/includes/alumnos_modales.html" %}
+{% include "admin_panel/includes/alumnos_detalle_modal.html" %}
+
+<div id="notificacion"></div>
+
+<!-- Loader -->
+<div id="loader">
+    <div class="spinner-border text-success" role="status"></div>
+    Cargando...
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+    {% now "U" as timestamp %}
+    <script src="{% static 'js/alumnos.js' %}?v={{ timestamp }}"></script>
+
     <script>
-        window.SCODA_CONFIG = {
-            API_BASE_URL: "{{ API_BASE_URL }}",
-            SCODA_API_KEY: "{{ SCODA_API_KEY }}",
-            ACCESS_TOKEN: "{{ ACCESS_TOKEN }}"
-        };
-
         function volverDashboard() {
             window.location.href = "/panel/dashboard/";
         }
     </script>
-
-    <!-- JS de Alumnos -->
-    {% now "U" as timestamp %}
-    <script src="{% static 'js/alumnos.js' %}?v={{ timestamp }}"></script>
-
-</body>
-</html>
+{% endblock %}

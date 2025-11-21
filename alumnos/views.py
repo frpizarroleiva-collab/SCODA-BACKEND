@@ -11,11 +11,11 @@ from .serializers import AlumnoSerializer
 
 from personas.models import Persona
 from escuela.models import Curso
-from ubicacion.models import Direccion   # ← IMPORTANTE
+from ubicacion.models import Direccion
 
 
 # ============================================================
-# FUNCIÓN AUXILIAR PARA CREAR DIRECCIÓN
+# FUNCIÓN PARA CREAR DIRECCIÓN
 # ============================================================
 def crear_direccion(data):
     if not data or not isinstance(data, dict):
@@ -29,7 +29,7 @@ def crear_direccion(data):
 
 
 # ============================================================
-#   ALUMNO VIEWSET — VERSIÓN FINAL
+#   ALUMNO
 # ============================================================
 class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = Alumno.objects.select_related(
@@ -47,9 +47,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         "persona__run",
     ]
 
-    # ============================================================
+    # =====================
     # DETALLE DEL ALUMNO
-    # ============================================================
+    # ====================
     @action(detail=True, methods=['get'], url_path='detalle')
     def detalle_alumno(self, request, pk=None):
         try:
@@ -142,9 +142,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "total_autorizados": len(data_autorizados)
         })
 
-    # ============================================================
+    # ===============
     # UPDATE ALUMNO
-    # ============================================================
+    # ===============
     def update(self, request, *args, **kwargs):
         alumno = self.get_object()
         persona = alumno.persona
@@ -174,9 +174,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "alumno": AlumnoSerializer(alumno).data
         }, status=200)
 
-    # ============================================================
+    # =======================
     # CREAR FAMILIA COMPLETA
-    # ============================================================
+    # =======================
     @action(detail=False, methods=['post'], url_path='crear-familia')
     def crear_familia(self, request):
 
@@ -189,8 +189,6 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
         # Dirección del apoderado
         direccion_apoderado = crear_direccion(apoderado_data.get("direccion"))
-
-        # Crear/O obtener apoderado principal
         try:
             apoderado_ppal, _ = Persona.objects.get_or_create(
                 run=apoderado_data.get('run'),
@@ -213,7 +211,6 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if hasattr(apoderado_ppal, "alumno"):
             return Response({"error": "Esta persona es un ALUMNO y no puede ser apoderado."}, status=400)
 
-        #Crear alumnos
         alumnos_creados = []
 
         for alumno_data in alumnos_data:
@@ -237,7 +234,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
             alumno = Alumno.objects.create(
                 persona=persona_alumno,
-                curso_id=curso_id   # YA NO ROMPE
+                curso_id=curso_id 
             )
 
             PersonaAutorizadaAlumno.objects.create(
@@ -249,8 +246,6 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             )
 
             alumnos_creados.append(alumno)
-
-        #Apoderados extra
         for ap_data in apoderados_extras:
 
             direccion_extra = crear_direccion(ap_data.get("direccion"))
@@ -306,9 +301,9 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         }, status=201)
 
 
-# ============================================================
+# ==========================
 # CRUD PERSONAS AUTORIZADAS
-# ============================================================
+# ==========================
 class PersonaAutorizadaAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     queryset = PersonaAutorizadaAlumno.objects.select_related(
         'alumno__persona', 'persona'
