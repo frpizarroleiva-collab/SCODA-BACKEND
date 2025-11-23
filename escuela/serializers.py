@@ -32,7 +32,6 @@ class CursoSerializer(serializers.ModelSerializer):
     def validate_establecimiento(self, value):
         return value or None
 
-    # Objetos completos
     profesor_obj = serializers.SerializerMethodField(read_only=True)
     establecimiento_obj = serializers.SerializerMethodField(read_only=True)
 
@@ -58,8 +57,6 @@ class CursoSerializer(serializers.ModelSerializer):
             'hora_inicio',
             'hora_termino',
         ]
-
-    # --- GETTERS ---
     def get_profesor_nombre(self, obj):
         if obj.profesor:
             return f"{obj.profesor.nombres} {obj.profesor.apellido_uno}"

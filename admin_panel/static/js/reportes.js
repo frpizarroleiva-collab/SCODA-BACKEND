@@ -41,8 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // =======================================================
     // FORMATO FECHA Y HORA (CORREGIDO)
     // =======================================================
-
-    // ⚠ NO usamos new Date(fechaStr) porque causa desfase de 1 día (UTC)
     function formatFecha(fechaISO) {
         if (!fechaISO) return "-";
         const [year, month, day] = fechaISO.split("-");
@@ -52,12 +50,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function formatHora(horaStr) {
         if (!horaStr) return "-";
 
-        // Si viene en formato "21:55:01", tomamos solo HH:MM
         if (horaStr.includes(":")) {
             return horaStr.substring(0, 5);
         }
 
-        // Manejo alternativo por seguridad
         const d = new Date(horaStr);
         const hh = d.getHours().toString().padStart(2, "0");
         const mm = d.getMinutes().toString().padStart(2, "0");
@@ -129,7 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =======================================================
-    // RENDER TABLA (SIN RUN)
+    // RENDER TABLA
     // =======================================================
     function renderTabla(listado) {
 

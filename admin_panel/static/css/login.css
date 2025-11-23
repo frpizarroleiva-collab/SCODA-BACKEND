@@ -31,10 +31,9 @@ body {
 }
 
 .position-relative input.form-control {
-    padding-right: 2.2rem !important; /* espacio para el ojito */
+    padding-right: 2.2rem !important;
 }
 
-/* 🔹 Botón mostrar contraseña — centrado perfecto */
 #toggle-password {
     position: absolute;
     top: 50%;
@@ -134,7 +133,6 @@ body[data-theme="dark"] footer {
     color: #777;
 }
 
-/* 🔧 FIX DEFINITIVO - centrado y tamaño correcto del ojito */
 .position-relative {
     position: relative;
 }
@@ -168,7 +166,6 @@ body[data-theme="dark"] footer {
     pointer-events: none;
 }
 
-/* Asegura espacio del input */
 input.form-control {
     padding-right: 2.2rem !important;
 }

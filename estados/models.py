@@ -23,7 +23,6 @@ class EstadoAlumno(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADOS_CHOICES)
     hora_registro = models.DateTimeField(auto_now=True)
 
-    # Usuario que registra el estado (profesor, portería, etc.)
     usuario_registro = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -43,7 +42,7 @@ class EstadoAlumno(models.Model):
 
     observacion = models.TextField(blank=True, null=True)
 
-    # Imagen almacenada directamente en Base64
+    # Imagen almacenada en Base64
     foto_documento = models.TextField(
         null=True,
         blank=True,

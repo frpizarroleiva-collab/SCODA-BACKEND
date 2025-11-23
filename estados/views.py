@@ -7,7 +7,9 @@ from auditoria.mixins import AuditoriaMixin
 from .models import EstadoAlumno, HistorialEstadoAlumno
 from .serializers import EstadoAlumnoSerializer
 from escuela.models import Curso
-from django.utils.timezone import localtime   # ← HORA LOCAL
+from django.utils.timezone import localtime
+from django.db import IntegrityError
+
 
 
 class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -166,16 +168,21 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                         obj.save(update_fields=['retiro_anticipado'])
 
             # HISTORIAL
-            HistorialEstadoAlumno.objects.create(
-                estado_alumno=obj,
-                alumno_id=alumno_id,
-                curso_id=curso_id,
-                fecha=fecha,
-                estado=estado_upper,
-                observacion=observacion,
-                usuario_registro=user,
-                retirado_por_id=retirado_por_id if estado_upper == 'RETIRADO' else None
-            )
+            try:
+                HistorialEstadoAlumno.objects.create(
+                    estado_alumno=obj,
+                    alumno_id=alumno_id,
+                    curso_id=curso_id,
+                    fecha=fecha,
+                    estado=estado_upper,
+                    observacion=observacion,
+                    usuario_registro=user,
+                    retirado_por_id=retirado_por_id if estado_upper == 'RETIRADO' else None
+                )
+            except IntegrityError:
+                # Evita que la API explote
+                print(f"[WARN] Historial duplicado para alumno {alumno_id} ({fecha}) — ignorado.")
+
 
             procesados.append({
                 'alumno_id': alumno_id,

@@ -7,7 +7,7 @@ class EstablecimientoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Establecimiento
-        fields = '__all__'   # mantiene TODO lo existente + añade direccion_obj
+        fields = '__all__'  
 
     def get_direccion_obj(self, obj):
         if not obj.direccion:

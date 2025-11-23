@@ -24,7 +24,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasAPIKey]
 
     # ============================================================
-    # CREATE — PERMITE direccion_id Y sexo SIN ROMPER NADA
+    # CREATE — PERMITE direccion_id Y sexo
     # ============================================================
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -58,7 +58,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ============================================================
-    # UPDATE — NORMALIZA SEXO / DIRECCIÓN PARA EVITAR ERRORES
+    # UPDATE — NORMALIZA SEXO / DIRECCIÓN
     # ============================================================
     def update(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -69,12 +69,12 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if "sexo" in data and data["sexo"] == "":
             data["sexo"] = None
 
-        request._full_data = data  # Necesario para que DRF use el nuevo dict
+        request._full_data = data
 
         return super().update(request, *args, **kwargs)
 
     # ============================================================
-    # PARTIAL UPDATE (PATCH)
+    # PARTIAL UPDATE
     # ============================================================
     def partial_update(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -322,7 +322,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         )
 
         # --------------------------------------------
-        # 4) Registrar auditoría
+        #Registrar auditoría
         # --------------------------------------------
         self.registrar_auditoria(
             request,

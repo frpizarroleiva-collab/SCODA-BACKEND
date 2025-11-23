@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 
 class Notificacion(models.Model):
-    # Para usuarios del sistema (admin, profesores, portería, etc.)
+    # Para usuarios del sistema
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -11,7 +11,7 @@ class Notificacion(models.Model):
         null=True, blank=True
     )
 
-    # Para personas (apoderados, alumnos, etc.)
+    # Para personas
     persona = models.ForeignKey(
         'personas.Persona',
         on_delete=models.CASCADE,

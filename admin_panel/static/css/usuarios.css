@@ -39,9 +39,6 @@ body {
     margin-right: 10px;
 }
 
-/* ==========================
-      MODO OSCURO
-========================== */
 body[data-theme="dark"] {
     background: #121212;
     color: #e9ecef;
@@ -61,9 +58,6 @@ body[data-theme="dark"] #loader {
     color: #8ef091;
 }
 
-/* ==========================
-   ALTURA COMPLETA
-========================== */
 html, body {
     height: 100%;
 }
@@ -78,14 +72,10 @@ main {
     flex: 1;
 }
 
-/* ================================
-   🔔 TOAST NOTIFICACIÓN GLOBAL
-   (Arriba a la derecha)
-================================ */
 #notificacion {
     position: fixed;
-    top: 90px;         /* debajo de la navbar */
-    right: 25px;       /* ALINEADO DERECHA */
+    top: 90px;      
+    right: 25px;      
     background: #198754;
     color: white;
     padding: 12px 25px;
@@ -97,7 +87,6 @@ main {
     animation: fadeInOut 3.3s ease forwards;
 }
 
-/* Animación del toast */
 @keyframes fadeInOut {
     0%   { opacity: 0; transform: translateY(-10px); }
     10%  { opacity: 1; transform: translateY(0); }

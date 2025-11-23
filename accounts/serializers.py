@@ -95,8 +95,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         }
 
         password = validated_data.pop('password', None)
-
-        # Asegurar que el username no quede vacío
+        
         if not validated_data.get('username'):
             validated_data['username'] = validated_data.get('email', instance.username)
 
@@ -119,9 +118,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "user": self._usuario_response(instance, persona)
         }
 
-    # ----------------------------------------------------------
-    # FUNCIONES AUXILIARES
-    # ----------------------------------------------------------
     def _actualizar_persona(self, persona, data, usuario):
         updated = False
 

@@ -283,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // AUTO-REFRESH CADA 60 SEGUNDOS (sin loader)
     // ============================================================
     setInterval(() => {
-        cargarTodo(true); // refresco silencioso sin loader
+        cargarTodo(true);
     }, 60000);
 
 });

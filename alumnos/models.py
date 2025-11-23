@@ -26,7 +26,7 @@ class Alumno(models.Model):
 class PersonaAutorizadaAlumno(models.Model):
 
     # -----------------------------------------------
-    # CHOICES PARA PARENTESCO
+    #PARENTESCO
     # -----------------------------------------------
     class ParentescoChoices(models.TextChoices):
         PADRE = "Padre", "Padre"

@@ -71,7 +71,7 @@ class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         message = result.get("message", "Usuario y Persona creados correctamente")
         user_data = result.get("user", {})
 
-        # 🔹 Registrar auditoría
+        #Registrar auditoría
         self.registrar_auditoria(
             request,
             'CREAR',
@@ -212,7 +212,7 @@ class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # 🔹 Registrar auditoría
+        #Registrar auditoría
         self.registrar_auditoria(
             request,
             'ACTUALIZAR',

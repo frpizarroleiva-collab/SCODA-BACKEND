@@ -130,10 +130,6 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
         texto += f", {d.comuna.nombre}"
         return texto
 
-
-# ============================================================
-# NUEVO SERIALIZER — SOLO PARA LA API DE BÚSQUEDA POR DOCUMENTO
-# ============================================================
 class PersonaBusquedaSerializer(serializers.ModelSerializer):
     pais_nacionalidad_nombre = serializers.CharField(
         source="pais_nacionalidad.nombre",

@@ -32,7 +32,6 @@ class EstadoAlumnoSerializer(serializers.ModelSerializer):
         try:
             return hora.strftime("%H:%M")
         except:
-            # Por si viene corrupto
             return "-"
     
     # ----------- NOMBRE COMPLETO DEL ALUMNO -----------

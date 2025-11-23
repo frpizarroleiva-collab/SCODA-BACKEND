@@ -30,7 +30,7 @@ body {
 }
 
 /* =============================
-TARJETAS ANTIGUAS (compatibilidad)
+TARJETAS
 ============================= */
 .card {
     border-radius: 14px;
@@ -43,7 +43,7 @@ TARJETAS ANTIGUAS (compatibilidad)
 }
 
 /* =============================
-NUEVAS TARJETAS SCODA APP
+TARJETAS ESTILO SCODA APP
 ============================= */
 .scoda-card {
     background: #fff;
@@ -77,7 +77,7 @@ NUEVAS TARJETAS SCODA APP
 }
 
 /* =============================
-GRÁFICO (Chart.js)
+GRÁFICO
 ============================= */
 #grafico-estados {
     max-height: 300px;
@@ -94,9 +94,7 @@ LISTADOS RÁPIDOS
     padding: 8px 10px;
 }
 
-/* =============================
-MODO OSCURO COMPLETO
-============================= */
+
 body[data-theme="dark"] {
     background-color: #1e1e1e;
     color: #ddd;
@@ -159,7 +157,7 @@ body[data-theme="dark"] .alert-success {
 }
 
 /* =============================
-   ⚙ ESTRUCTURA GENERAL
+ESTRUCTURA GENERAL
 ============================= */
 html, body {
     height: 100%;
@@ -170,7 +168,7 @@ main {
 }
 
 /* =============================
-LOADER GLOBAL SCODA
+LOADER GLOBAL
 ============================= */
 .scoda-loader {
     position: fixed;

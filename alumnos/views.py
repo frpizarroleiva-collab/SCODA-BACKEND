@@ -59,7 +59,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         except Alumno.DoesNotExist:
             return Response({"error": "El alumno no existe."}, status=404)
 
-        # APODERADOS PRINCIPALES
+        # APODERADOS
         apoderados = PersonaAutorizadaAlumno.objects.select_related(
             'persona'
         ).filter(alumno_id=alumno.id, tipo_relacion='apoderado')

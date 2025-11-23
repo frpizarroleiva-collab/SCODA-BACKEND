@@ -21,4 +21,4 @@ def ausentes():
         if created:
             creados += 1
 
-    print(f"✅ Se generaron {creados} registros base con estado AUSENTE para el día {hoy}.")
+    print(f"Se generaron {creados} registros base con estado AUSENTE para el día {hoy}.")

@@ -23,7 +23,7 @@ class DocumentoIdentidadViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 1) BUSCAR POR DOCUMENTO IDENTIDAD (Pasaporte, DNI, etc.)
+        #BUSCAR POR DOCUMENTO IDENTIDAD (Pasaporte, DNI, etc.)
         try:
             doc = DocumentoIdentidad.objects.select_related("persona").get(
                 identificador=valor
@@ -32,7 +32,7 @@ class DocumentoIdentidadViewSet(viewsets.ReadOnlyModelViewSet):
         except DocumentoIdentidad.DoesNotExist:
             pass
 
-        # 2) SI NO EXISTE DOCUMENTO, BUSCAR POR RUN
+        #SI NO EXISTE DOCUMENTO, BUSCAR POR RUN
         try:
             persona = Persona.objects.get(run=valor)
             return Response(PersonaBusquedaSerializer(persona).data)
