@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_spectacular', 
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
@@ -60,6 +61,7 @@ INSTALLED_APPS = [
     'auditoria',
     'estados',
     'admin_panel',
+    'transporte',
 ]
 
 # ===============================================================
@@ -89,6 +91,20 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'SCODA API',
+    'DESCRIPTION': 'Documentación automática del sistema SCODA.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    # === AGREGAR ESTO ===
+    'EXCLUDE_PATHS': [
+        '/api/login/',
+        '/api/acceso/refresh/',
+    ],
 }
 
 SIMPLE_JWT = {

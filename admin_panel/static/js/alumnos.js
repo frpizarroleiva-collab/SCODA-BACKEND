@@ -40,6 +40,34 @@ const selectRegion = formFamilia.querySelector("select[name='region_apoderado']"
 const selectComuna = formFamilia.querySelector("select[name='comuna_apoderado']");
 
 // =======================================
+// VALIDAR RUN (FRONTEND)
+// =======================================
+function validarRunChile(run) {
+    if (!run) return false;
+
+    run = run.replace(/\./g, "").replace(/-/g, "").replace(/\s+/g, "").toUpperCase();
+    if (run.length < 2) return false;
+
+    const cuerpo = run.slice(0, -1);
+    let dv = run.slice(-1);
+
+    if (!/^\d+$/.test(cuerpo)) return false;
+
+    let suma = 0;
+    let multiplo = 2;
+
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+        suma += multiplo * parseInt(cuerpo[i]);
+        multiplo = multiplo === 7 ? 2 : multiplo + 1;
+    }
+
+    const resto = 11 - (suma % 11);
+    let dv_calculado = resto === 11 ? "0" : resto === 10 ? "K" : String(resto);
+
+    return dv === dv_calculado;
+}
+
+// =======================================
 // VARIABLES
 // =======================================
 let paisesCache = [];
@@ -69,7 +97,6 @@ function mostrarNotificacion(msg, color = "#007BFF") {
     notificacion.textContent = msg;
     notificacion.style.background = color;
     notificacion.style.display = "block";
-
     setTimeout(() => (notificacion.style.display = "none"), 2200);
 }
 
@@ -174,6 +201,7 @@ function crearBloqueApoderadoExtra() {
     div.innerHTML = `
         <h6 class="fw-bold text-success">Apoderado adicional</h6>
         <div class="row g-2">
+
             <div class="col-md-4">
                 <label>Nombres</label>
                 <input class="form-control nombre_extra">
@@ -301,6 +329,48 @@ btnAgregarApoderadoExtra.addEventListener("click", crearBloqueApoderadoExtra);
 // =======================================
 formFamilia.addEventListener("submit", async e => {
     e.preventDefault();
+
+    // =======================================================
+    // VALIDAR RUN DEL APODERADO PRINCIPAL
+    // =======================================================
+    const runApoderado = formFamilia.run_apoderado.value;
+    if (runApoderado && !validarRunChile(runApoderado)) {
+        mostrarNotificacion("El RUN del apoderado principal no es válido", "#dc3545");
+        return;
+    }
+
+    // =======================================================
+    // VALIDAR RUN DE APODERADOS EXTRA
+    // =======================================================
+    let runInvalidoExtra = false;
+    contenedorApoderadosExtra.querySelectorAll(".bloque-apoderado-extra").forEach(div => {
+        const runExtra = div.querySelector(".run_extra").value;
+        if (runExtra && !validarRunChile(runExtra)) {
+            runInvalidoExtra = true;
+        }
+    });
+
+    if (runInvalidoExtra) {
+        mostrarNotificacion("Uno o más RUN de apoderados adicionales no es válido", "#dc3545");
+        return;
+    }
+
+    // =======================================================
+    // VALIDAR RUN DE HIJOS
+    // =======================================================
+    let runInvalidoHijo = false;
+    contenedorHijos.querySelectorAll(".bloque-hijo").forEach(div => {
+        const runHijo = div.querySelector(".run_hijo").value;
+        if (runHijo && !validarRunChile(runHijo)) {
+            runInvalidoHijo = true;
+        }
+    });
+
+    if (runInvalidoHijo) {
+        mostrarNotificacion("Uno o más RUN de los alumnos es inválido", "#dc3545");
+        return;
+    }
+
     mostrarLoader(true);
 
     const direccionPrincipal = {

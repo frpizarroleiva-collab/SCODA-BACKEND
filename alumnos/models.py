@@ -1,5 +1,6 @@
 ﻿from django.db import models
 from django.core.exceptions import ValidationError
+from transporte.models import Furgon 
 
 
 class Alumno(models.Model):
@@ -15,6 +16,18 @@ class Alumno(models.Model):
         null=True,
         related_name="alumnos"
     )
+    
+    # ----------------------------------------------------
+    # NUEVO: Furgón asignado al alumno
+    # ----------------------------------------------------
+    furgon = models.ForeignKey(
+        Furgon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="alumnos"
+    )
+
 
     class Meta:
         db_table = 'alumno'

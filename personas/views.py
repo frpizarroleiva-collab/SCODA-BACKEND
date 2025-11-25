@@ -8,6 +8,7 @@ from auditoria.mixins import AuditoriaMixin
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
+from personas.utils import validar_run as validar_run_chile   # ✅ VALIDADOR RUN
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -24,10 +25,20 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasAPIKey]
 
     # ============================================================
-    # CREATE — PERMITE direccion_id Y sexo
+    # CREATE — PERMITE direccion_id Y sexo + VALIDACIÓN RUN
     # ============================================================
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
+
+        # 👉 Validar RUN si viene
+        if "run" in data and data["run"]:
+            run = data["run"].replace(".", "").replace(" ", "").upper()
+            if not validar_run_chile(run):
+                return Response(
+                    {"error": "El RUN ingresado no es válido"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            data["run"] = run  # normalizado
 
         # Normalizar dirección
         direccion_id = data.get("direccion") or data.get("direccion_id")
@@ -58,10 +69,20 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ============================================================
-    # UPDATE — NORMALIZA SEXO / DIRECCIÓN
+    # UPDATE — NORMALIZA SEXO / DIRECCIÓN + VALIDAR RUN
     # ============================================================
     def update(self, request, *args, **kwargs):
         data = request.data.copy()
+
+        # 👉 Validar RUN si viene
+        if "run" in data and data["run"]:
+            run = data["run"].replace(".", "").replace(" ", "").upper()
+            if not validar_run_chile(run):
+                return Response(
+                    {"error": "El RUN ingresado no es válido"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            data["run"] = run
 
         if "direccion" in data and data["direccion"] == "":
             data["direccion"] = None
@@ -74,7 +95,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     # ============================================================
-    # PARTIAL UPDATE
+    # PARTIAL UPDATE — NO VALIDAMOS RUN para no romper PATCH
     # ============================================================
     def partial_update(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -104,7 +125,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # ============================================================
-    # VALIDAR RUN — LECTURA COMPLETA + RELACIONES
+    # VALIDAR RUN — LECTURA COMPLETA + RELACIONES + VALIDACIÓN RUN
     # ============================================================
     @action(
         detail=False,
@@ -122,6 +143,13 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         run = run.replace(".", "").replace(" ", "").upper()
+
+        # 👉 Validar RUN antes de consultar BD
+        if not validar_run_chile(run):
+            return Response({
+                "existe": False,
+                "mensaje": "El RUN ingresado no es válido"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             persona = Persona.objects.select_related(
@@ -182,7 +210,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
             )
 
-            # Auditoría consulta correcta
+            # Auditoría
             self.registrar_auditoria(
                 request,
                 'CONSULTA',
@@ -199,17 +227,15 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "email": persona.email or "",
                 "fecha_nacimiento": persona.fecha_nacimiento,
 
-                # SEXO
                 "sexo": persona.sexo,
                 "sexo_display": persona.get_sexo_display() if persona.sexo else None,
 
-                # DIRECCIÓN
                 "direccion_id": persona.direccion_id,
                 "direccion_detalle": serializer.data.get("direccion_detalle"),
 
-                # UBICACIÓN
                 "comuna_id": persona.comuna_id,
                 "comuna_nombre": persona.comuna.nombre if persona.comuna else None,
+
                 "pais_nacionalidad_id": persona.pais_nacionalidad_id,
                 "pais_nacionalidad_nombre": (
                     persona.pais_nacionalidad.nombre
@@ -217,10 +243,10 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     else None
                 ),
 
-                # RELACIONES
                 "es_apoderado": es_apoderado,
                 "es_autorizado": es_autorizado,
                 "mensaje_autorizado": mensaje_autorizado,
+
                 "alumnos_asociados": alumnos_data,
                 "alumnos_autorizados": autorizaciones_data,
 
@@ -238,11 +264,16 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "existe": False,
                 "mensaje": "No se encontró una persona con ese RUN"
             }, status=status.HTTP_404_NOT_FOUND)
-            
+
     # ============================================================
-    # VALIDAR DOCUMENTO IDENTIDAD (Pasaporte, DNI, RUN extranjero)
+    # VALIDAR DOCUMENTO IDENTIDAD
     # ============================================================
-    @action(detail=False,methods=['post'],url_path='validar-documento',permission_classes=[IsAuthenticated, HasAPIKey])
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='validar-documento',
+        permission_classes=[IsAuthenticated, HasAPIKey]
+    )
     def validar_documento(self, request):
         valor = request.data.get("valor")
 
@@ -274,6 +305,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "existe": False,
                 "mensaje": "No se encontró una persona con ese documento o RUN"
             }, status=status.HTTP_404_NOT_FOUND)
+
         serializer = PersonaBasicaSerializer(persona)
 
         apoderados_qs = PersonaAutorizadaAlumno.objects.filter(
@@ -304,8 +336,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 "alumno": (
                     f"{rel.alumno.persona.nombres} "
                     f"{rel.alumno.persona.apellido_uno} "
-                    f"{rel.alumno.persona.apellido_dos or ''}"
-                ).strip(),
+                    f"{rel.alumno.persona.apellido_dos or ''}").strip(),
                 "id_curso": rel.alumno.curso.id if rel.alumno.curso else None,
                 "curso": rel.alumno.curso.nombre if rel.alumno.curso else None,
                 "tipo_relacion": rel.tipo_relacion,
@@ -321,15 +352,13 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "Autorizado" if es_apoderado or es_autorizado else "No está autorizado"
         )
 
-        # --------------------------------------------
-        #Registrar auditoría
-        # --------------------------------------------
         self.registrar_auditoria(
             request,
             'CONSULTA',
             'Persona',
             f"Validación de documento {valor} - Resultado: ENCONTRADO"
         )
+
         return Response({
             "existe": True,
             "persona": serializer.data,
@@ -340,7 +369,9 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "sexo": persona.sexo,
             "direccion_detalle": serializer.data.get("direccion_detalle"),
             "comuna_nombre": persona.comuna.nombre if persona.comuna else None,
-            "pais_nacionalidad_nombre": (persona.pais_nacionalidad.nombre if persona.pais_nacionalidad else None),
+            "pais_nacionalidad_nombre": (
+                persona.pais_nacionalidad.nombre if persona.pais_nacionalidad else None
+            ),
             "es_apoderado": es_apoderado,
             "es_autorizado": es_autorizado,
             "mensaje_autorizado": mensaje_autorizado,

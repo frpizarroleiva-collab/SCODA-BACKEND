@@ -2,8 +2,8 @@ from rest_framework import serializers
 from django.db import IntegrityError
 from .models import Alumno, PersonaAutorizadaAlumno
 from personas.models import Persona
-from escuela.models import Curso   # ← IMPORT NECESARIO
-
+from escuela.models import Curso
+from transporte.models import Furgon
 
 class AlumnoSerializer(serializers.ModelSerializer):
 
@@ -12,9 +12,14 @@ class AlumnoSerializer(serializers.ModelSerializer):
         required=True
     )
 
-    # FIX: DRF exige queryset aquí
     curso = serializers.PrimaryKeyRelatedField(
         queryset=Curso.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
+    furgon = serializers.PrimaryKeyRelatedField(
+        queryset=Furgon.objects.all(),
         required=False,
         allow_null=True
     )
@@ -27,11 +32,8 @@ class AlumnoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Alumno
-        fields = ["id", "persona", "curso", "personas_autorizadas"]
+        fields = ["id", "persona", "curso", "furgon", "personas_autorizadas"]
 
-    # ------------------------------------------------------------
-    # INIT dinámico (mantener por compatibilidad)
-    # ------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
@@ -47,13 +49,13 @@ class AlumnoSerializer(serializers.ModelSerializer):
         persona = validated_data.pop("persona")
         personas_autorizadas = validated_data.pop("personas_autorizadas", [])
 
-        #No permitir que un apoderado sea alumno
+        # No permitir que un apoderado sea alumno
         if persona.autorizaciones.exists():
             raise serializers.ValidationError(
                 {"persona": "Esta persona ya es APODERADO y no puede ser alumno."}
             )
 
-        #Crear alumno
+        # Crear alumno
         try:
             alumno = Alumno.objects.create(persona=persona, **validated_data)
         except IntegrityError:
@@ -61,13 +63,13 @@ class AlumnoSerializer(serializers.ModelSerializer):
                 {"persona": "El RUN ya existe y pertenece a otra persona."}
             )
 
-        #Validar máximo 3 autorizados
+        # Validar máximo 3 autorizados
         if len(personas_autorizadas) > 3:
             raise serializers.ValidationError(
                 {"personas_autorizadas": "Máximo 3 personas autorizadas por alumno."}
             )
 
-        #Crear autorizados
+        # Crear autorizados
         for aut_data in personas_autorizadas:
 
             persona_id = aut_data.get("persona")
@@ -125,6 +127,15 @@ class AlumnoSerializer(serializers.ModelSerializer):
                 "id": instance.curso.id,
                 "nombre": instance.curso.nombre
             }
+
+        data["furgon_detalle"] = (
+            {
+                "id": instance.furgon.id,
+                "patente": instance.furgon.patente,
+                "conductor": instance.furgon.conductor
+            }
+            if instance.furgon else None
+        )
 
         data["personas_autorizadas_detalle"] = [
             {
