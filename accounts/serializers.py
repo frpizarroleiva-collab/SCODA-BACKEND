@@ -14,7 +14,6 @@ from django.contrib.auth.tokens import default_token_generator
 # ==============================================================
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    # Campos adicionales relacionados con Persona
     password = serializers.CharField(write_only=True, required=False)
     username = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     run = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -35,10 +34,43 @@ class UsuarioSerializer(serializers.ModelSerializer):
     # ----------------------------------------------------------
     # VALIDACIONES
     # ----------------------------------------------------------
-    def validate_email(self, value):
-        if self.instance is None and Usuario.objects.filter(email=value).exists():
-            raise serializers.ValidationError('Este Email ya se encuentra registrado, prueba con otro')
+    
+    def validate_password(self, value):
+        if value and len(value) < 6:
+            raise serializers.ValidationError("La contraseña debe tener al menos 6 caracteres.")
         return value
+    def validate_first_name(self, value):
+        if not value:
+            raise serializers.ValidationError("El nombre es obligatorio.")
+        if len(value) < 2:
+            raise serializers.ValidationError("El nombre debe tener al menos 2 caracteres.")
+        return value
+
+    def validate_last_name(self, value):
+        if not value:
+            raise serializers.ValidationError("El apellido es obligatorio.")
+        if len(value) < 2:
+            raise serializers.ValidationError("El apellido debe tener al menos 2 caracteres.")
+        return value
+
+    def validate_rol(self, value):
+        if not value:
+            raise serializers.ValidationError("Debes seleccionar un rol.")
+        return value
+
+    def validate_is_active(self, value):
+        if value is None:
+            raise serializers.ValidationError("Debes indicar si el usuario está activo.")
+        return value
+
+    
+    def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("El email es obligatorio.")
+        if self.instance is None and Usuario.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este Email ya se encuentra registrado, prueba con otro")
+        return value
+
 
     def validate(self, attrs):
         run = attrs.get('run')

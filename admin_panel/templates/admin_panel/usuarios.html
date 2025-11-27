@@ -23,7 +23,11 @@
         animation: fadeInOut 3.3s ease forwards;
     }
 
-    /* Loader (compatibilidad) */
+    /* Loader FIX para que funcione */
+    #loader {
+        display: none !important;  /* ← SOLUCIÓN */
+    }
+
     #loader.show {
         display: flex !important;
     }
@@ -130,6 +134,39 @@
 
         </div>
     </div>
+</div>
+
+<!-- ============================
+     MODAL CONFIRMAR ELIMINACIÓN
+=============================== -->
+<div class="modal fade" id="modalConfirmarEliminarUsuario" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirmar eliminación
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <p class="mb-2">¿Seguro que deseas eliminar este usuario?</p>
+        <small class="text-muted">Esta acción no se puede deshacer.</small>
+      </div>
+
+      <div class="modal-footer d-flex justify-content-between">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-1"></i> Cancelar
+        </button>
+
+        <button id="btnConfirmarEliminarUsuario" class="btn btn-danger">
+            <i class="bi bi-trash-fill me-1"></i> Eliminar
+        </button>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <!-- Loader global -->

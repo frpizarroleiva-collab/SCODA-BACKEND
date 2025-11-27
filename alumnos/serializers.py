@@ -24,7 +24,7 @@ class AlumnoSerializer(serializers.ModelSerializer):
         allow_null=True
     )
 
-    # Recibe objetos con parentesco, autorizado, persona_id, etc.
+    # Recibe objetos con parentesco
     personas_autorizadas = serializers.ListField(
         child=serializers.DictField(),
         required=False
@@ -87,7 +87,7 @@ class AlumnoSerializer(serializers.ModelSerializer):
             from alumnos.models import Alumno as AlumnoModel
             if AlumnoModel.objects.filter(persona=persona_aut).exists():
                 raise serializers.ValidationError(
-                    {"personas_autorizadas": "Un ALUMNO no puede ser autorizado/apoderado."}
+                    {"personas_autorizadas": "Un Alumno no puede ser autorizado/apoderado."}
                 )
 
             # Validar duplicado

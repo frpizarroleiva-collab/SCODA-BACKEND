@@ -594,16 +594,29 @@ formEditar.addEventListener("submit", async e => {
 // =======================================
 // ELIMINAR ALUMNO
 // =======================================
-async function eliminarAlumno(id) {
-    if (!confirm("¿Eliminar alumno?")) return;
+// Variable temporal para almacenar el ID a eliminar
+let alumnoAEliminar = null;
+
+function eliminarAlumno(id) {
+    alumnoAEliminar = id;
+    const modal = new bootstrap.Modal(document.getElementById("modalConfirmarEliminar"));
+    modal.show();
+}
+
+document.getElementById("btnConfirmarEliminar").addEventListener("click", async () => {
+    if (!alumnoAEliminar) return;
 
     mostrarLoader(true);
-    const res = await fetch(`${API_BASE_URL}/api/alumnos/${id}`, {
+
+    const res = await fetch(`${API_BASE_URL}/api/alumnos/${alumnoAEliminar}`, {
         method: "DELETE",
         headers: getHeaders()
     });
 
     mostrarLoader(false);
+
+    // Reset ID
+    alumnoAEliminar = null;
 
     if (!res.ok) {
         mostrarNotificacion("Error al eliminar alumno", "#dc3545");
@@ -612,7 +625,12 @@ async function eliminarAlumno(id) {
 
     mostrarNotificacion("Alumno eliminado correctamente", "#28a745");
     cargarAlumnos();
-}
+
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById("modalConfirmarEliminar"));
+    modal.hide();
+});
+
 
 // =======================================
 // DETALLE ALUMNO

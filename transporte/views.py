@@ -32,7 +32,6 @@ class FurgonViewSet(viewsets.ModelViewSet):
             fecha=hoy
         ).values_list("alumno_id", flat=True)
 
-        # PRESENTES = alumnos del furgón que NO tienen estado hoy
         alumnos_presentes = alumnos.exclude(id__in=alumnos_con_estado)
 
         data = [
@@ -54,16 +53,16 @@ class FurgonViewSet(viewsets.ModelViewSet):
     def retirar_todos(self, request, pk=None):
         hoy = date.today()
 
-        # 1. Alumnos asignados al furgón
+        # Alumnos asignados al furgón
         alumnos = Alumno.objects.filter(furgon_id=pk)
 
-        # 2. Alumnos con estado hoy (cualquier estado)
+        # Alumnos con estado
         alumnos_con_estado = EstadoAlumno.objects.filter(
             alumno__in=alumnos,
             fecha=hoy
         ).values_list("alumno_id", flat=True)
 
-        # 3. Filtrar solo los presentes
+        #Filtrar solo los presentes
         alumnos_presentes = alumnos.exclude(id__in=alumnos_con_estado)
 
         if not alumnos_presentes.exists():
@@ -74,7 +73,7 @@ class FurgonViewSet(viewsets.ModelViewSet):
 
         retirados = []
 
-        # 4. Registrar RETIRO masivo
+        #Registrar RETIRO masivo
         for alumno in alumnos_presentes:
             estado = EstadoAlumno.objects.create(
                 alumno=alumno,

@@ -42,7 +42,7 @@ function showToast(msg, type = "success") {
 }
 
 // =======================================================
-// MODAL
+// MODAL (crear/editar usuario)
 // =======================================================
 const modal = new bootstrap.Modal(document.getElementById("modalUsuario"));
 
@@ -93,7 +93,7 @@ async function cargarUsuarios() {
                         <button class="btn btn-warning btn-sm me-1" onclick="editarUsuario('${u.email}')">
                             <i class="bi bi-pencil-square"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.email}')">
+                        <button class="btn btn-danger btn-sm" onclick="confirmarEliminarUsuario('${u.email}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -101,6 +101,7 @@ async function cargarUsuarios() {
             `
             )
             .join("");
+
     } catch (err) {
         showToast(err.message, "error");
     } finally {
@@ -122,14 +123,27 @@ async function guardarUsuario(e) {
     const method = emailHidden ? "PUT" : "POST";
 
     try {
-        const usuario = {
+        const passwordInput = document.getElementById("password").value;
+
+        if (!emailHidden && (!passwordInput || passwordInput.length < 6)) {
+            hideLoader();
+            showToast("La contraseña debe tener mínimo 6 caracteres.", "error");
+            return;
+        }
+
+        let usuario = {
             first_name: document.getElementById("first_name").value,
             last_name: document.getElementById("last_name").value,
             email,
             rol: document.getElementById("rol").value,
             is_active: document.getElementById("activo").value === "true",
-            password: document.getElementById("password").value || "12345678",
         };
+
+        if (!emailHidden) {
+            usuario.password = passwordInput;
+        } else if (passwordInput.trim() !== "") {
+            usuario.password = passwordInput;
+        }
 
         const res = await fetch(url, {
             method,
@@ -139,7 +153,21 @@ async function guardarUsuario(e) {
 
         if (!res.ok) {
             const error = await res.json();
-            throw new Error(error.detail || "No se pudo guardar el usuario");
+
+            let msg = "No se pudo guardar el usuario";
+
+            if (error.detail) {
+                msg = error.detail;
+            } else if (typeof error === "object") {
+                const firstKey = Object.keys(error)[0];
+                if (Array.isArray(error[firstKey])) {
+                    msg = error[firstKey][0];
+                }
+            }
+
+            hideLoader();
+            showToast(msg, "error");
+            return;
         }
 
         modal.hide();
@@ -152,6 +180,7 @@ async function guardarUsuario(e) {
         hideLoader();
     }
 }
+
 
 // =======================================================
 // EDITAR
@@ -174,15 +203,35 @@ async function editarUsuario(email) {
 }
 
 // =======================================================
-// ELIMINAR
+// ELIMINACIÓN (CON MODAL Y LOADER TIPO ALUMNOS)
 // =======================================================
-async function eliminarUsuario(email) {
-    if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
 
-    showLoader("Eliminando usuario...");
+// email temporal a eliminar
+let emailAEliminar = null;
+
+// abrir modal
+function confirmarEliminarUsuario(email) {
+    emailAEliminar = email;
+
+    const modalEliminar = new bootstrap.Modal(
+        document.getElementById("modalConfirmarEliminarUsuario")
+    );
+
+    modalEliminar.show();
+}
+
+// botón confirmar (modal)
+document.getElementById("btnConfirmarEliminarUsuario").addEventListener("click", async () => {
+
+    if (!emailAEliminar) return;
+
+    // pequeño delay para permitir cerrar modal antes de mostrar loader
+    setTimeout(() => {
+        showLoader("Eliminando usuario...");
+    }, 150);
 
     try {
-        const res = await fetch(`${API_URL}/${email}`, {
+        const res = await fetch(`${API_URL}/${emailAEliminar}`, {
             method: "DELETE",
             headers: getHeaders(),
         });
@@ -195,9 +244,17 @@ async function eliminarUsuario(email) {
     } catch (err) {
         showToast(err.message, "error");
     } finally {
+
+        emailAEliminar = null;
+
+        const modalEliminar = bootstrap.Modal.getInstance(
+            document.getElementById("modalConfirmarEliminarUsuario")
+        );
+        modalEliminar.hide();
+
         hideLoader();
     }
-}
+});
 
 // =======================================================
 // INICIO

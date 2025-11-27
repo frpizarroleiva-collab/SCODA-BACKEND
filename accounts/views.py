@@ -43,14 +43,14 @@ class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     # ----------------------------------------------------------
     def get_permissions(self):
         if self.action in ['reset_password_confirm', 'reset_password_form']:
-            return [AllowAny()]  # acceso público (link por correo)
+            return [AllowAny()] 
         if self.action in ['enviar_link_reset']:
-            return [IsAdminUser()]  # solo admin puede enviar links
+            return [IsAdminUser()] 
         if self.action in ['reset_password']:
-            return [HasAPIKey()]  # cambio directo con API Key
+            return [HasAPIKey()] 
         if self.action in ['list', 'create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminUser()]  # solo admin
-        return [IsAuthenticated()]  # por defecto autenticado
+            return [IsAdminUser()]
+        return [IsAuthenticated()] 
 
     # ----------------------------------------------------------
     # FILTRO DE QUERYSET
@@ -137,7 +137,7 @@ class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         user.set_password(new_password)
         user.save()
 
-        # 🔹 Registrar auditoría
+        #Registrar auditoría
         self.registrar_auditoria(
             request,
             'ACTUALIZAR',
@@ -165,7 +165,7 @@ class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response({"message": "Contraseña actualizada con éxito"}, status=200)
 
     # ----------------------------------------------------------
-    # ENVIAR LINK DE RESETEO (solo admin)
+    # ENVIAR LINK DE RESETEO
     # ----------------------------------------------------------
     @action(detail=True, methods=["post"], url_path="enviar-link-reset")
     def enviar_link_reset(self, request, email=None):
@@ -193,7 +193,7 @@ class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             fail_silently=False,
         )
 
-        # 🔹 Registrar auditoría
+        #Registrar auditoría
         self.registrar_auditoria(
             request,
             'ENVIAR_CORREO',

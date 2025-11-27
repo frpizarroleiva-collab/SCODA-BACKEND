@@ -18,7 +18,7 @@ class Alumno(models.Model):
     )
     
     # ----------------------------------------------------
-    # NUEVO: Furgón asignado al alumno
+    #Furgón asignado por alumno
     # ----------------------------------------------------
     furgon = models.ForeignKey(
         Furgon,
@@ -39,7 +39,7 @@ class Alumno(models.Model):
 class PersonaAutorizadaAlumno(models.Model):
 
     # -----------------------------------------------
-    #PARENTESCO
+    # TIPOS DE PARENTESCO
     # -----------------------------------------------
     class ParentescoChoices(models.TextChoices):
         PADRE = "Padre", "Padre"
