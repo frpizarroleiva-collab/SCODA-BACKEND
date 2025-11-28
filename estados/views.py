@@ -11,7 +11,6 @@ from django.utils.timezone import localtime
 from django.db import IntegrityError
 
 
-
 class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = EstadoAlumnoSerializer
@@ -56,14 +55,14 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return queryset.order_by('-fecha', 'alumno__persona__nombres')
 
     # ----------------------------------------------------------
-    # ACTUALIZAR ESTADOS
+    # ACTUALIZAR ESTADOS (CORREGIDO)
     # ----------------------------------------------------------
     @action(detail=False, methods=['post'], url_path='actualizar')
     def actualizar_estados(self, request):
-        from alumnos.models import PersonaAutorizadaAlumno
+        from alumnos.models import PersonaAutorizadaAlumno, Alumno
 
         user = request.user
-        curso_id = request.data.get('curso_id')
+        curso_id_front = request.data.get('curso_id')
         registros = request.data.get('registros', [])
         fecha_str = request.data.get('fecha')
 
@@ -75,7 +74,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         else:
             fecha = date.today()
 
-        if not curso_id or not registros:
+        if not curso_id_front or not registros:
             return Response({'error': 'curso_id y registros son requeridos'}, status=400)
 
         procesados = []
@@ -103,8 +102,24 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
+            # ------------------------------------------
+            # OBTENER EL CURSO REAL DEL ALUMNO (CORRECCIÓN)
+            # ------------------------------------------
+            alumno_obj = Alumno.objects.select_related("curso").filter(id=alumno_id).first()
+            if not alumno_obj or not alumno_obj.curso:
+                procesados.append({
+                    'alumno_id': alumno_id,
+                    'estado': estado_upper,
+                    'codigo_estado': 0,
+                    'codigo_bloqueo': 901,
+                    'observacion': "El alumno no tiene curso asignado."
+                })
+                continue
+
+            curso_real = alumno_obj.curso  # ← SE USA ESTE, NO EL DEL FRONT
+
             existente = EstadoAlumno.objects.filter(
-                alumno_id=alumno_id, curso_id=curso_id, fecha=fecha
+                alumno_id=alumno_id, curso_id=curso_real.id, fecha=fecha
             ).first()
 
             if existente:
@@ -119,7 +134,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
             # VALIDAR APODERADO/AUTORIZADO
             if estado_upper == 'RETIRADO' and retirado_por_id:
-                from alumnos.models import PersonaAutorizadaAlumno
                 autorizado = PersonaAutorizadaAlumno.objects.filter(
                     alumno_id=alumno_id,
                     persona_id=retirado_por_id,
@@ -152,27 +166,30 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             if foto_base64:
                 defaults['foto_documento'] = foto_base64
 
+            # ----------------------------------------------------
+            # update_or_create usando curso REAL (CORRECCIÓN)
+            # ----------------------------------------------------
             obj, _ = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
-                curso_id=curso_id,
+                curso_id=curso_real.id,  # ← CURSO CORRECTO
                 fecha=fecha,
                 defaults=defaults
             )
 
-            # RETIRO ANTICIPADO
+            # RETIRO ANTICIPADO usando curso REAL
             if estado_upper == 'RETIRADO':
-                curso = Curso.objects.filter(id=curso_id).first()
+                curso = curso_real
                 if curso and curso.hora_termino:
                     if localtime().time() < curso.hora_termino:
                         obj.retiro_anticipado = True
                         obj.save(update_fields=['retiro_anticipado'])
 
-            # HISTORIAL
+            # HISTORIAL usando CURSO REAL
             try:
                 HistorialEstadoAlumno.objects.create(
                     estado_alumno=obj,
                     alumno_id=alumno_id,
-                    curso_id=curso_id,
+                    curso_id=curso_real.id,  # ← CORRECTO
                     fecha=fecha,
                     estado=estado_upper,
                     observacion=observacion,
@@ -180,9 +197,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                     retirado_por_id=retirado_por_id if estado_upper == 'RETIRADO' else None
                 )
             except IntegrityError:
-                # Evita que la API explote
                 print(f"[WARN] Historial duplicado para alumno {alumno_id} ({fecha}) — ignorado.")
-
 
             procesados.append({
                 'alumno_id': alumno_id,
@@ -196,7 +211,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         # AUDITORÍA
         self.registrar_auditoria(
             request, 'ACTUALIZAR', 'EstadoAlumno',
-            f"Se procesaron {len(procesados)} registros para el curso {curso_id} ({fecha})"
+            f"Se procesaron {len(procesados)} registros para el curso {curso_id_front} ({fecha})"
         )
 
         return Response(
