@@ -1,5 +1,5 @@
 // =======================================================
-//   SCODA — GESTIÓN DETALLE DE CURSO (VERSIÓN FINAL OK)
+//   SCODA — GESTIÓN DETALLE DE CURSO
 // =======================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -23,12 +23,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const tbodyBuscador = document.getElementById("buscar-alumno-body");
 
     const modalAgregar = document.getElementById("modalAgregarAlumno");
-    const loader = document.getElementById("loader");
 
     const modalAgregarBS = new bootstrap.Modal(modalAgregar);
 
-    function showLoader() { loader.style.display = "flex"; }
-    function hideLoader() { loader.style.display = "none"; }
+    function showLoader(texto = "Cargando...") {
+    const loader = document.getElementById("loader");
+    loader.classList.add("show");
+    const span = loader.querySelector("span");
+    if (span) span.textContent = texto;
+}
+    function hideLoader() {
+    document.getElementById("loader").classList.remove("show");
+}
 
     function notificar(msg, tipo = "success") {
         const div = document.getElementById("notificacion");
@@ -98,13 +104,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // =======================================================
-    // CHIP DE ESTADO
+    // ESTADOS
     // =======================================================
     function generarChipEstado(estado) {
-        if (!estado) return `<span class="estado-chip estado-SIN">SIN REGISTRO</span>`;
-        const clase = estado.replaceAll(" ", "_").toUpperCase();
-        return `<span class="estado-chip estado-${clase}">${estado}</span>`;
-    }
+    if (!estado) return `<span class="estado-chip estado-SIN">SIN REGISTRO</span>`;
+
+    const clase = estado.replaceAll(" ", "_").toUpperCase();
+    return `<span class="estado-chip estado-${clase}">${estado}</span>`;
+}
+
 
     // =======================================================
     // CARGAR ALUMNOS DEL CURSO
@@ -145,27 +153,46 @@ document.addEventListener("DOMContentLoaded", () => {
     // =======================================================
     // QUITAR ALUMNO
     // =======================================================
-    window.quitarAlumno = async function (alumnoId) {
-        if (!confirm("¿Seguro?")) return;
+    let alumnoAEliminar = null;
 
-        try {
-            showLoader();
+window.quitarAlumno = function (alumnoId) {
 
-            await fetch(`${API_BASE_URL}/api/alumnos/${alumnoId}`, {
-                method: "PATCH",
-                headers,
-                body: JSON.stringify({ curso: null })
-            });
+    alumnoAEliminar = alumnoId;
 
-            notificar("Alumno quitado");
-            cargarAlumnosCurso();
+    document.getElementById("textoConfirmAlumno").textContent =
+        "¿Seguro que deseas quitar este alumno del curso?";
 
-        } catch {
-            notificar("Error al quitar alumno", "danger");
-        } finally {
-            hideLoader();
-        }
-    };
+    const modal = new bootstrap.Modal(document.getElementById("modalConfirmDeleteAlumno"));
+    modal.show();
+};
+
+document.getElementById("btnConfirmDeleteAlumno").addEventListener("click", async () => {
+    if (!alumnoAEliminar) return;
+
+    showLoader("Quitando alumno...");
+
+    try {
+        await fetch(`${API_BASE_URL}/api/alumnos/${alumnoAEliminar}`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({ curso: null })
+        });
+
+        hideLoader();
+
+        notificar("Alumno quitado correctamente");
+
+        cargarAlumnosCurso();
+
+        // cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById("modalConfirmDeleteAlumno")).hide();
+
+    } catch {
+        hideLoader();
+        notificar("Error al quitar alumno", "danger");
+    }
+});
+
 
     // =======================================================
     // BUSCAR
@@ -176,7 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     tbodyBuscador.innerHTML = "";
 
-    // FIX DEFINITIVO: aceptar results O array directo
     (data.results || data || []).forEach((al, idx) => {
 
         const p = al.persona_detalle;  // TU API usa persona_detalle
@@ -196,39 +222,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 }
 
-// =======================================================
-// FIX DEFINITIVO: BUSCADOR SIN LISTENERS DUPLICADOS
-// =======================================================
 let listenerBuscar = null;
 
 modalAgregar.addEventListener("shown.bs.modal", () => {
 
     const inputBuscarAlumno = document.getElementById("buscar-alumno-input");
-
-    // reset tabla
     tbodyBuscador.innerHTML = "";
     inputBuscarAlumno.value = "";
     buscarAlumno("");
 
-    // eliminar listener anterior si existe
     if (listenerBuscar) {
         inputBuscarAlumno.removeEventListener("input", listenerBuscar);
     }
-
-    // definir listener nuevo
     listenerBuscar = () => {
     const val = inputBuscarAlumno.value.trim();
-
-        // Buscar desde 1 letra
         if (val.length >= 1) {
             buscarAlumno(val);
         } else {
-            // si está vacío, cargar todos
             buscarAlumno("");
         }
     };
 
-    // aplicarlo
     inputBuscarAlumno.addEventListener("input", listenerBuscar);
 });
 

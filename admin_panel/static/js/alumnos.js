@@ -68,6 +68,40 @@ function validarRunChile(run) {
 }
 
 // =======================================
+// MANEJO DE ERRORES DEL BACKEND (NUEVO)
+// =======================================
+function mostrarErroresBackend(json) {
+    if (!json) {
+        mostrarNotificacion("Error desconocido del servidor", "#dc3545");
+        return;
+    }
+
+    if (typeof json === "string") {
+        mostrarNotificacion(json, "#dc3545");
+        return;
+    }
+
+    if (json.error) {
+        mostrarNotificacion(json.error, "#dc3545");
+        return;
+    }
+
+    if (typeof json === "object") {
+        const errores = [];
+
+        for (const key in json) {
+            if (Array.isArray(json[key])) {
+                errores.push(`${key}: ${json[key].join(", ")}`);
+            } else {
+                errores.push(`${key}: ${json[key]}`);
+            }
+        }
+
+        mostrarNotificacion(errores.join(" | "), "#dc3545");
+    }
+}
+
+// =======================================
 // VARIABLES
 // =======================================
 let paisesCache = [];
@@ -97,7 +131,7 @@ function mostrarNotificacion(msg, color = "#007BFF") {
     notificacion.textContent = msg;
     notificacion.style.background = color;
     notificacion.style.display = "block";
-    setTimeout(() => (notificacion.style.display = "none"), 2200);
+    setTimeout(() => (notificacion.style.display = "none"), 2600);
 }
 
 function mostrarLoader(show = true) {
@@ -184,6 +218,7 @@ const opcionesParentesco = `
 <option value="Hermano">Hermano</option>
 <option value="Hermana">Hermana</option>
 <option value="Otro">Otro</option>
+<option value="Apoderado">Apoderado</option>
 `;
 
 // ---------------------------------------
@@ -330,48 +365,79 @@ btnAgregarApoderadoExtra.addEventListener("click", crearBloqueApoderadoExtra);
 formFamilia.addEventListener("submit", async e => {
     e.preventDefault();
 
-    // =======================================================
-    // VALIDAR RUN DEL APODERADO PRINCIPAL
-    // =======================================================
+    // VALIDACIÓN RUN APODERADO PRINCIPAL
     const runApoderado = formFamilia.run_apoderado.value;
     if (runApoderado && !validarRunChile(runApoderado)) {
         mostrarNotificacion("El RUN del apoderado principal no es válido", "#dc3545");
         return;
     }
 
-    // =======================================================
-    // VALIDAR RUN DE APODERADOS EXTRA
-    // =======================================================
+    // VALIDACIÓN RUN APODERADOS EXTRAS
     let runInvalidoExtra = false;
-    contenedorApoderadosExtra.querySelectorAll(".bloque-apoderado-extra").forEach(div => {
-        const runExtra = div.querySelector(".run_extra").value;
-        if (runExtra && !validarRunChile(runExtra)) {
-            runInvalidoExtra = true;
-        }
+    contenedorApoderadosExtra.querySelectorAll(".run_extra").forEach(input => {
+        if (input.value && !validarRunChile(input.value)) runInvalidoExtra = true;
     });
-
     if (runInvalidoExtra) {
-        mostrarNotificacion("Uno o más RUN de apoderados adicionales no es válido", "#dc3545");
+        mostrarNotificacion("Uno o más RUN de los apoderados adicionales no es válido", "#dc3545");
         return;
     }
 
-    // =======================================================
-    // VALIDAR RUN DE HIJOS
-    // =======================================================
+    // VALIDACIÓN RUN HIJOS
     let runInvalidoHijo = false;
-    contenedorHijos.querySelectorAll(".bloque-hijo").forEach(div => {
-        const runHijo = div.querySelector(".run_hijo").value;
-        if (runHijo && !validarRunChile(runHijo)) {
-            runInvalidoHijo = true;
-        }
+    contenedorHijos.querySelectorAll(".run_hijo").forEach(input => {
+        if (input.value && !validarRunChile(input.value)) runInvalidoHijo = true;
     });
-
     if (runInvalidoHijo) {
         mostrarNotificacion("Uno o más RUN de los alumnos es inválido", "#dc3545");
         return;
     }
 
+    // VALIDACIÓN DE NOMBRES OBLIGATORIOS (NUEVO)
+    if (!formFamilia.nombres_apoderado.value.trim() ||
+        !formFamilia.apellido_uno_apoderado.value.trim()) {
+        mostrarNotificacion("El apoderado principal debe tener nombre y apellido.", "#dc3545");
+        return;
+    }
+
+    let datosInvalidosExtra = false;
+    contenedorApoderadosExtra.querySelectorAll(".bloque-apoderado-extra").forEach(div => {
+        const nom = div.querySelector(".nombre_extra").value.trim();
+        const ape = div.querySelector(".apellido_uno_extra").value.trim();
+        if (!nom || !ape) datosInvalidosExtra = true;
+    });
+    if (datosInvalidosExtra) {
+        mostrarNotificacion("Todos los apoderados adicionales deben tener nombre y apellido.", "#dc3545");
+        return;
+    }
+
+    let datosInvalidosHijos = false;
+    contenedorHijos.querySelectorAll(".bloque-hijo").forEach(div => {
+        const nom = div.querySelector(".nombre_hijo").value.trim();
+        const ape = div.querySelector(".apellido_uno_hijo").value.trim();
+        if (!nom || !ape) datosInvalidosHijos = true;
+    });
+    if (datosInvalidosHijos) {
+        mostrarNotificacion("Todos los alumnos deben tener nombre y apellido.", "#dc3545");
+        return;
+    }
+
+    // VALIDACIÓN DE PARENTESCO (NUEVO)
+    const parentescosValidos = ["Padre","Madre","Abuelo","Abuela","Tío","Tía","Hermano","Hermana","Otro","Apoderado"];
+    let parentescoInvalido = false;
+    contenedorApoderadosExtra.querySelectorAll(".parentesco_extra").forEach(sel => {
+        if (sel.value && !parentescosValidos.includes(sel.value)) parentescoInvalido = true;
+    });
+    if (parentescoInvalido) {
+        mostrarNotificacion("Uno o más parentescos no son válidos.", "#dc3545");
+        return;
+    }
+
+    // --------------------------------------------
+    // INICIO ENVÍO
+    // --------------------------------------------
     mostrarLoader(true);
+    const btnSubmit = formFamilia.querySelector("button[type='submit']");
+    btnSubmit.disabled = true;
 
     const direccionPrincipal = {
         calle: formFamilia.calle_apoderado.value,
@@ -447,10 +513,12 @@ formFamilia.addEventListener("submit", async e => {
     });
 
     mostrarLoader(false);
+    btnSubmit.disabled = false;
+
     const json = await res.json();
 
     if (!res.ok) {
-        mostrarNotificacion(json.error || "Error al crear familia", "#dc3545");
+        mostrarErroresBackend(json);
         return;
     }
 
@@ -582,7 +650,8 @@ formEditar.addEventListener("submit", async e => {
     mostrarLoader(false);
 
     if (!res.ok) {
-        mostrarNotificacion("Error al actualizar alumno", "#dc3545");
+        const err = await res.json();
+        mostrarErroresBackend(err);
         return;
     }
 
@@ -594,7 +663,6 @@ formEditar.addEventListener("submit", async e => {
 // =======================================
 // ELIMINAR ALUMNO
 // =======================================
-// Variable temporal para almacenar el ID a eliminar
 let alumnoAEliminar = null;
 
 function eliminarAlumno(id) {
@@ -615,22 +683,20 @@ document.getElementById("btnConfirmarEliminar").addEventListener("click", async 
 
     mostrarLoader(false);
 
-    // Reset ID
     alumnoAEliminar = null;
 
     if (!res.ok) {
-        mostrarNotificacion("Error al eliminar alumno", "#dc3545");
+        const err = await res.json();
+        mostrarErroresBackend(err);
         return;
     }
 
     mostrarNotificacion("Alumno eliminado correctamente", "#28a745");
     cargarAlumnos();
 
-    // Cerrar modal
     const modal = bootstrap.Modal.getInstance(document.getElementById("modalConfirmarEliminar"));
     modal.hide();
 });
-
 
 // =======================================
 // DETALLE ALUMNO

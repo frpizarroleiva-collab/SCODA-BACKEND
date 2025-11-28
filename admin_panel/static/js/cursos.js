@@ -24,8 +24,11 @@ function getHeaders() {
 // ---------------------------------------------------------------
 //  UTILIDADES
 // ---------------------------------------------------------------
-function mostrarLoader(mostrar = true) {
-    document.getElementById("loader").style.display = mostrar ? "flex" : "none";
+function mostrarLoader(mostrar = true, texto = "Cargando...") {
+    const loader = document.getElementById("loader");
+    loader.style.display = mostrar ? "flex" : "none";
+    const span = loader.querySelector("span");
+    if (span) span.textContent = texto;
 }
 
 function notificar(mensaje, tipo = "success") {
@@ -106,7 +109,7 @@ async function cargarCursos() {
                         <button class="btn btn-warning btn-sm me-1" onclick="editarCurso(${c.id})">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarCurso(${c.id})">
+                        <button class="btn btn-danger btn-sm" onclick="abrirConfirmacionEliminar(${c.id}, '${c.nombre}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -153,7 +156,7 @@ async function actualizarHorario(id) {
 }
 
 // ---------------------------------------------------------------
-//  ABRIR MODAL
+//  ABRIR MODAL CURSO
 // ---------------------------------------------------------------
 function abrirModal(curso = null) {
     const modal = new bootstrap.Modal(document.getElementById("modalCurso"));
@@ -164,10 +167,7 @@ function abrirModal(curso = null) {
     if (curso) {
         document.getElementById("nombre").value = curso.nombre;
         document.getElementById("nivel").value = curso.nivel;
-
-        document.getElementById("profesor").value =
-            curso.profesor ? curso.profesor : "";
-
+        document.getElementById("profesor").value = curso.profesor || "";
         document.getElementById("establecimiento").value =
             curso.establecimiento_obj ? curso.establecimiento_obj.id : "";
     }
@@ -189,7 +189,7 @@ async function editarCurso(id) {
 }
 
 // -----------------------------------------
-//  GUARDAR (CREATE = POST, UPDATE = PATCH)
+//  GUARDAR (POST o PATCH)
 // -----------------------------------------
 async function guardarCurso(e) {
     e.preventDefault();
@@ -233,24 +233,51 @@ async function guardarCurso(e) {
     }
 }
 
-// ----------------
-//  ELIMINAR CURSO
-// ----------------
-function eliminarCurso(id) {
-    if (!confirm("¿Seguro que deseas eliminar este curso?")) return;
+// -----------------------------
+// MODAL CONFIRMACIÓN ELIMINAR
+// -----------------------------
 
-    fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
-        headers: getHeaders(),
-    }).then((res) => {
+let cursoAEliminar = null;
+
+// ➕ AGREGADO: abrir modal bonito
+function abrirConfirmacionEliminar(id, nombre) {
+    cursoAEliminar = id;
+    document.getElementById("confirm-delete-text").textContent =
+        `¿Seguro que deseas eliminar el curso "${nombre}"?`;
+
+    const modal = new bootstrap.Modal(document.getElementById("modalConfirmDelete"));
+    modal.show();
+}
+
+document.getElementById("btnConfirmDelete").addEventListener("click", async () => {
+    if (!cursoAEliminar) return;
+
+    mostrarLoader(true, "Eliminando curso...");
+
+    try {
+        const res = await fetch(`${API_URL}/${cursoAEliminar}`, {
+            method: "DELETE",
+            headers: getHeaders(),
+        });
+
+        mostrarLoader(false);
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById("modalConfirmDelete"));
+        modal.hide(); 
+
         if (res.status === 204) {
             notificar("Curso eliminado correctamente.");
-            document.querySelector(`tr[data-id="${id}"]`).remove();
+            document.querySelector(`tr[data-id="${cursoAEliminar}"]`)?.remove();
         } else {
             notificar("Error al eliminar el curso.", "danger");
         }
-    });
-}
+
+    } catch (error) {
+        mostrarLoader(false);
+        notificar("Error inesperado al eliminar.", "danger");
+    }
+});
+
 
 // -------------
 //  INICIALIZAR

@@ -1,13 +1,14 @@
 from rest_framework import serializers
 from .models import Persona
 from .models import DocumentoIdentidad
+from ubicacion.serializers import DireccionSerializer
 
 
 # ============================================================
 # SERIALIZER PRINCIPAL DE PERSONA
 # ============================================================
 class PersonaSerializer(serializers.ModelSerializer):
-    # Campos legibles (ubicación)
+    # Campos legibles de ubicación
     comuna_nombre = serializers.CharField(source="comuna.nombre", read_only=True)
     region_nombre = serializers.CharField(source="comuna.region.nombre", read_only=True)
     pais_residencia_nombre = serializers.CharField(
@@ -21,12 +22,15 @@ class PersonaSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    # Dirección completa
+    # Dirección completa SERIALIZADA
+    direccion = DireccionSerializer(read_only=True)
+
+    # Dirección como texto
     direccion_detalle = serializers.SerializerMethodField()
 
     # Sexo legible
     sexo_display = serializers.CharField(source="get_sexo_display", read_only=True)
-    
+
     def validate_sexo(self, value):
         if value and value not in ["M", "F", "O"]:
             raise serializers.ValidationError("Sexo debe ser M, F u O.")
@@ -62,7 +66,6 @@ class PersonaSerializer(serializers.ModelSerializer):
             "direccion_detalle",
         ]
 
-
     def get_direccion_detalle(self, obj):
         if not obj.direccion:
             return None
@@ -76,7 +79,6 @@ class PersonaSerializer(serializers.ModelSerializer):
         texto += f", {d.comuna.nombre}"
         return texto
 
-
 # ============================================================
 # SERIALIZER BÁSICO (para listados, validar-run, dropdowns)
 # ============================================================
@@ -86,6 +88,9 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
         source="pais_nacionalidad.nombre",
         read_only=True
     )
+
+    # Dirección serializada
+    direccion = DireccionSerializer(read_only=True)
 
     direccion_detalle = serializers.SerializerMethodField()
     sexo_display = serializers.CharField(source="get_sexo_display", read_only=True)
@@ -101,16 +106,10 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
             "email",
             "fono",
             "fecha_nacimiento",
-
-            # SEXO
             "sexo",
             "sexo_display",
-
-            # Dirección
             "direccion",
             "direccion_detalle",
-
-            # Ubicación
             "comuna",
             "comuna_nombre",
             "pais_nacionalidad",
@@ -129,6 +128,7 @@ class PersonaBasicaSerializer(serializers.ModelSerializer):
 
         texto += f", {d.comuna.nombre}"
         return texto
+
 
 class PersonaBusquedaSerializer(serializers.ModelSerializer):
     pais_nacionalidad_nombre = serializers.CharField(
@@ -166,3 +166,5 @@ class DocumentoIdentidadSerializer(serializers.ModelSerializer):
             "pais_emisor",
             "pais_emisor_nombre",
         ]
+        
+        

@@ -13,6 +13,14 @@ from personas.models import Persona
 from escuela.models import Curso
 from ubicacion.models import Direccion
 
+def format_direccion(d):
+    if not d:
+        return None
+    texto = f"{d.calle} {d.numero}"
+    if d.depto:
+        texto += f", Depto {d.depto}"
+    texto += f", {d.comuna.nombre}"
+    return texto
 
 # ============================================================
 # FUNCIÓN PARA CREAR DIRECCIÓN
@@ -70,7 +78,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "run": a.persona.run,
             "telefono": a.persona.fono or "",
             "correo": a.persona.email or "",
-            "direccion": a.persona.direccion,
+            "direccion": format_direccion(a.persona.direccion),
             "fecha_nacimiento": a.persona.fecha_nacimiento,
             "sexo": a.persona.sexo,
             "comuna_id": a.persona.comuna_id,
@@ -98,7 +106,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "parentesco": a.parentesco,
             "telefono": a.persona.fono or "",
             "correo": a.persona.email or "",
-            "direccion": a.persona.direccion,
+            "direccion": format_direccion(a.persona.direccion),
             "fecha_nacimiento": a.persona.fecha_nacimiento,
             "sexo": a.persona.sexo,
             "comuna_id": a.persona.comuna_id,
@@ -123,7 +131,7 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             if alumno.curso and alumno.curso.establecimiento else None,
             "fecha_nacimiento": alumno.persona.fecha_nacimiento,
             "sexo": alumno.persona.sexo,
-            "direccion": alumno.persona.direccion,
+            "direccion": format_direccion(alumno.persona.direccion),
             "comuna_id": alumno.persona.comuna_id,
             "comuna_nombre": alumno.persona.comuna.nombre if alumno.persona.comuna else None,
             "region_id": alumno.persona.comuna.region.id if alumno.persona.comuna and alumno.persona.comuna.region else None,

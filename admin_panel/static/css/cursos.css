@@ -1,3 +1,25 @@
+/* =============================
+   TABLA Y BOTONES
+============================= */
+
+.btn-add { background-color: #28a745; color: white; }
+.btn-edit { background-color: #ffc107; color: black; }
+.btn-delete { background-color: #dc3545; color: white; }
+.btn-view { background-color: #17a2b8; color: white; }
+.btn-save { background-color: #007bff; color: white; }
+
+/* =============================
+   ENCABEZADOS DE TABLAS (GLOBAL)
+============================= */
+.table thead {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+/* =============================
+   CHIP DE ESTADOS
+============================= */
+
 .estado-chip {
     padding: 4px 10px;
     border-radius: 12px;
@@ -7,31 +29,174 @@
     display: inline-block;
 }
 
-/* ======== ESTADOS ======== */
-
-/* SIN REGISTRO */
 .estado-SIN,
-.estado-SIN_REGISTRO {
-    background-color: #6c757d;
-}
+.estado-SIN_REGISTRO { background-color: #6c757d; }
 
-/* AUSENTE */
-.estado-AUSENTE {
-    background-color: #dc3545;
-}
+.estado-AUSENTE { background-color: #dc3545; }
 
-/* EXTENSIÓN */
-.estado-EXTENSION {
-    background-color: #6f42c1;
-}
+.estado-EXTENSION { background-color: #6f42c1; }
 
-/* ANTICIPADO */
 .estado-ANTICIPADO {
     background-color: #ffc107;
     color: black !important;
 }
 
-/* RETIRADO */
-.estado-RETIRADO {
-    background-color: #6f42c1;
+.estado-RETIRADO { background-color: #198754; }
+
+/* =============================
+   LOADER GLOBAL
+============================= */
+
+#loader {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #198754;
 }
+
+#loader.show {
+    display: flex !important;
+}
+
+/* =============================
+   NOTIFICACIONES (TOAST)
+============================= */
+
+#notificacion {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+    display: none;
+    background: #198754;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-weight: 600;
+}
+
+#notificacion.error {
+    background: #dc3545 !important;
+}
+
+/* ===============================
+   TABLA ALUMNOS CURSO (ESPECÍFICA)
+================================ */
+
+#tabla-alumnos-curso thead,
+#tabla-alumnos-curso thead tr,
+#tabla-alumnos-curso thead th {
+    background-color: #198754 !important;
+    color: #ffffff !important;
+    border-color: #198754 !important;
+}
+
+/* ============================================
+   ENCABEZADOS VERDES DE LAS TARJETAS
+============================================ */
+.card-header {
+    background-color: #198754 !important;
+    color: #fff !important;
+    padding: 14px 20px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+}
+
+.card-header .btn {
+    background-color: #1f9d62 !important;
+    color: #fff !important;
+    border: none !important;
+}
+
+  .card-header {
+            background-color: #198754;
+            color: #fff;
+        }
+        .table thead {
+            background-color: #198754;
+            color: white;
+        }
+        .btn-add { background-color: #28a745; color: white; }
+        .btn-remove { background-color: #dc3545; color: #fff; }
+        .btn-back { background-color: #6c757d; color: #fff; }
+
+        /* LOADER */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.65);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            font-size: 17px;
+        }
+
+        /* CHIP DE ESTADO */
+        .estado-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .estado-AUSENTE { background:#dc3545; color:white; }
+        .estado-RETIRADO { background:#6f42c1; color:white; }
+        .estado-EXTENSION { background:#0d6efd; color:white; }
+        .estado-SIN { background:#6c757d; color:white; }
+
+          /* ======== CHIP BASE ======== */
+    .estado-chip {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+        display: inline-block;
+    }
+
+    /* ======== ESTADOS ======== */
+
+    /* SIN REGISTRO */
+    .estado-SIN,
+    .estado-SIN_REGISTRO {
+        background-color: #6c757d;
+    }
+
+    /* AUSENTE */
+    .estado-AUSENTE {
+        background-color: #dc3545;
+    }
+
+    /* EXTENSIÓN */
+    .estado-EXTENSION {
+        background-color: #6f42c1;
+    }
+
+    /* ANTICIPADO */
+    .estado-ANTICIPADO {
+        background-color: #ffc107;
+        color: black !important;
+    }
+
+    /* RETIRADO */
+    .estado-RETIRADO {
+        background-color: #198754;
+    }
+
+    .modal-dialog {
+        max-height: 90vh;
+    }
+
+    .modal-body {
+        overflow-y: auto !important;
+        max-height: 70vh;
+    }
