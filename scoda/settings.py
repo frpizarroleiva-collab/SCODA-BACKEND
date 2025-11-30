@@ -228,3 +228,6 @@ API_BASE_URL = env(
     "API_BASE_URL",
     default="http://127.0.0.1:8000"
 )
+
+
+EMAIL_DEBUG = True
