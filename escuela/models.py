@@ -11,13 +11,13 @@ class Curso(models.Model):
         related_name='cursos_dictados'
     )
 
+    # si borras la escuela, se eliminan sus cursos
     establecimiento = models.ForeignKey(
         'establecimientos.Establecimiento',
-        on_delete=models.CASCADE,  # si borras la escuela, se eliminan sus cursos
+        on_delete=models.CASCADE, 
         related_name='cursos'
     )
-
-    #Nuevos campos de horario por curso
+   # Horario por curso
     hora_inicio = models.TimeField(
         default="08:00",
         help_text="Hora de inicio de la jornada escolar para este curso"

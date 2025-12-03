@@ -8,7 +8,7 @@ from auditoria.mixins import AuditoriaMixin
 from .models import Persona
 from .serializers import PersonaSerializer, PersonaBasicaSerializer
 from alumnos.models import PersonaAutorizadaAlumno
-from personas.utils import validar_run as validar_run_chile   # ✅ VALIDADOR RUN
+from personas.utils import validar_run as validar_run_chile
 
 
 class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
@@ -95,7 +95,6 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     # ============================================================
-    # PARTIAL UPDATE — NO VALIDAMOS RUN para no romper PATCH
     # ============================================================
     def partial_update(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -125,7 +124,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # ============================================================
-    # VALIDAR RUN — LECTURA COMPLETA + RELACIONES + VALIDACIÓN RUN
+    # LECTURA COMPLETA + RELACIONES + VALIDACIÓN RUN
     # ============================================================
     @action(
         detail=False,

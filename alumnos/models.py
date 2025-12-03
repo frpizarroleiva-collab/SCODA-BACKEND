@@ -97,7 +97,6 @@ class PersonaAutorizadaAlumno(models.Model):
             raise ValidationError("Un alumno no puede tener más de 3 personas asociadas.")
 
         # Impedir que un ALUMNO sea apoderado/autorizado
-        # Si la persona tiene atributo .alumno → significa que es alumno
         if hasattr(self.persona, "alumno"):
             raise ValidationError(
                 "Esta persona es un ALUMNO y no puede ser registrada como apoderado o autorizado."

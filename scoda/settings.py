@@ -99,8 +99,6 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Documentación automática del sistema SCODA.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
-
-    # === AGREGAR ESTO ===
     'EXCLUDE_PATHS': [
         '/api/login/',
         '/api/acceso/refresh/',
@@ -189,12 +187,12 @@ USE_TZ = True
 # ===============================================================
 STATIC_URL = "/static/"
 
-# ← Carpeta donde tú editas JS/CSS del admin panel
+# Carpeta donde tú editas JS/CSS del admin panel
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "admin_panel", "static"),
 ]
 
-# ← Carpeta generada por collectstatic
+# Carpeta generada por collectstatic
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Whitenoise para producción

@@ -55,7 +55,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         return queryset.order_by('-fecha', 'alumno__persona__nombres')
 
     # ----------------------------------------------------------
-    # ACTUALIZAR ESTADOS (CORREGIDO)
+    # ACTUALIZAR ESTADOS
     # ----------------------------------------------------------
     @action(detail=False, methods=['post'], url_path='actualizar')
     def actualizar_estados(self, request):
@@ -103,7 +103,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 continue
 
             # ------------------------------------------
-            # OBTENER EL CURSO REAL DEL ALUMNO (CORRECCIÓN)
+            # OBTENER EL CURSO REAL DEL ALUMNO
             # ------------------------------------------
             alumno_obj = Alumno.objects.select_related("curso").filter(id=alumno_id).first()
             if not alumno_obj or not alumno_obj.curso:
@@ -116,7 +116,7 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 })
                 continue
 
-            curso_real = alumno_obj.curso  # ← SE USA ESTE, NO EL DEL FRONT
+            curso_real = alumno_obj.curso
 
             existente = EstadoAlumno.objects.filter(
                 alumno_id=alumno_id, curso_id=curso_real.id, fecha=fecha
@@ -166,9 +166,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             if foto_base64:
                 defaults['foto_documento'] = foto_base64
 
-            # ----------------------------------------------------
-            # update_or_create usando curso REAL (CORRECCIÓN)
-            # ----------------------------------------------------
             obj, _ = EstadoAlumno.objects.update_or_create(
                 alumno_id=alumno_id,
                 curso_id=curso_real.id,  # ← CURSO CORRECTO
@@ -184,7 +181,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                         obj.retiro_anticipado = True
                         obj.save(update_fields=['retiro_anticipado'])
 
-            # HISTORIAL usando CURSO REAL
             try:
                 HistorialEstadoAlumno.objects.create(
                     estado_alumno=obj,
@@ -208,7 +204,6 @@ class EstadoAlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
                 'retiro_anticipado': getattr(obj, 'retiro_anticipado', False)
             })
 
-        # AUDITORÍA
         self.registrar_auditoria(
             request, 'ACTUALIZAR', 'EstadoAlumno',
             f"Se procesaron {len(procesados)} registros para el curso {curso_id_front} ({fecha})"

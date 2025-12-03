@@ -41,15 +41,12 @@ class EstadoAlumno(models.Model):
     )
 
     observacion = models.TextField(blank=True, null=True)
-
-    # Imagen almacenada en Base64
+    # Imagen en Base64
     foto_documento = models.TextField(
         null=True,
         blank=True,
         help_text="Imagen en formato Base64 (data:image/jpeg;base64,...)"
     )
-
-    # Nuevo campo: indica si el retiro fue antes del horario de término del curso
     retiro_anticipado = models.BooleanField(
         default=False,
         help_text="Indica si el retiro ocurrió antes del horario de término del curso."

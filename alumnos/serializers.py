@@ -36,7 +36,7 @@ class AlumnoSerializer(serializers.ModelSerializer):
         fields = ["id", "persona", "curso", "furgon", "personas_autorizadas"]
 
     # ------------------------------------------------------------
-    # VALIDACIONES – SEGURAS, RÁPIDAS Y NO INTRUSIVAS
+    # VALIDACIONES
     # ------------------------------------------------------------
     def validate(self, attrs):
 
@@ -44,7 +44,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
         personas_autorizadas = self.initial_data.get("personas_autorizadas", [])
 
         # ----------------------------------------------
-        # 1) Persona YA es alumno → evitar IntegrityError
         # ----------------------------------------------
         if hasattr(persona, "alumno"):
             raise serializers.ValidationError({
@@ -53,7 +52,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
 
         # ----------------------------------------------
         # 2) RUN mínimo válido (solo si viene)
-        # No afecta la lógica actual · no obliga RUN
         # ----------------------------------------------
         if persona.run:
             run = persona.run.replace(".", "").replace("-", "").upper()
@@ -63,8 +61,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
                 })
 
         # --------------------------------------------------------------------
-        # 3) Persona es apoderado/autorizado en otro alumno (no permitido)
-        # Mantiene coherencia · evita apoderado → alumno
         # --------------------------------------------------------------------
         if persona.autorizaciones.exists():
             raise serializers.ValidationError({
@@ -72,8 +68,6 @@ class AlumnoSerializer(serializers.ModelSerializer):
             })
 
         # --------------------------------------------------------------------
-        # 4) Validación básica de autorizados
-        # No cambia reglas · solo evita datos basura o mal estructurados
         # --------------------------------------------------------------------
         for item in personas_autorizadas:
 
@@ -83,14 +77,13 @@ class AlumnoSerializer(serializers.ModelSerializer):
                     "personas_autorizadas": "Cada persona autorizada debe incluir el campo 'persona'."
                 })
 
-            # Validar parentesco contra choices reales
+            # Validar parentesco contra choices
             parentesco = item.get("parentesco")
             if parentesco and parentesco not in dict(PersonaAutorizadaAlumno.ParentescoChoices.choices):
                 raise serializers.ValidationError({
                     "personas_autorizadas": f"El parentesco '{parentesco}' no es válido."
                 })
 
-            # 'autorizado' debe ser boolean
             if "autorizado" in item and not isinstance(item.get("autorizado"), bool):
                 raise serializers.ValidationError({
                     "personas_autorizadas": "El campo 'autorizado' debe ser True o False."
@@ -99,14 +92,12 @@ class AlumnoSerializer(serializers.ModelSerializer):
         return attrs
 
     # ------------------------------------------------------------
-    # CREAR ALUMNO COMPLETO — LÓGICA ORIGINAL SCODA (NO MODIFICADA)
+    # CREAR ALUMNO COMPLETO
     # ------------------------------------------------------------
     def create(self, validated_data):
 
         persona = validated_data.pop("persona")
         personas_autorizadas = validated_data.pop("personas_autorizadas", [])
-
-        # Persona es apoderado → ya lo manejabas
         if persona.autorizaciones.exists():
             raise serializers.ValidationError(
                 {"persona": "Esta persona ya es APODERADO y no puede ser alumno."}

@@ -8,7 +8,7 @@ from ubicacion.serializers import DireccionSerializer
 # SERIALIZER PRINCIPAL DE PERSONA
 # ============================================================
 class PersonaSerializer(serializers.ModelSerializer):
-    # Campos legibles de ubicación
+    # Campos de ubicación
     comuna_nombre = serializers.CharField(source="comuna.nombre", read_only=True)
     region_nombre = serializers.CharField(source="comuna.region.nombre", read_only=True)
     pais_residencia_nombre = serializers.CharField(
@@ -21,14 +21,8 @@ class PersonaSerializer(serializers.ModelSerializer):
         source="pais_nacionalidad.nombre",
         read_only=True
     )
-
-    # Dirección completa SERIALIZADA
     direccion = DireccionSerializer(read_only=True)
-
-    # Dirección como texto
     direccion_detalle = serializers.SerializerMethodField()
-
-    # Sexo legible
     sexo_display = serializers.CharField(source="get_sexo_display", read_only=True)
 
     def validate_sexo(self, value):
@@ -48,17 +42,11 @@ class PersonaSerializer(serializers.ModelSerializer):
             "fecha_nacimiento",
             "sexo",
             "sexo_display",
-
-            # Contacto
             "email",
             "fono",
-
-            # Relaciones directas
             "comuna",
             "pais_nacionalidad",
             "direccion",
-
-            # Campos legibles adicionales
             "comuna_nombre",
             "region_nombre",
             "pais_residencia_nombre",
@@ -80,7 +68,7 @@ class PersonaSerializer(serializers.ModelSerializer):
         return texto
 
 # ============================================================
-# SERIALIZER BÁSICO (para listados, validar-run, dropdowns)
+# SERIALIZER (para listados, validar-run, dropdowns)
 # ============================================================
 class PersonaBasicaSerializer(serializers.ModelSerializer):
     comuna_nombre = serializers.CharField(source="comuna.nombre", read_only=True)

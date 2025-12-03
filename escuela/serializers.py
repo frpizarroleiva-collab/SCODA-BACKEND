@@ -11,8 +11,6 @@ class CursoSerializer(serializers.ModelSerializer):
     cantidad_alumnos = serializers.SerializerMethodField(read_only=True)
 
     nivel = serializers.IntegerField(min_value=0)
-
-    # --- PROFESOR (ACEPTA NULL, SOLO PROFESORES) ---
     profesor = serializers.PrimaryKeyRelatedField(
         queryset=Persona.objects.filter(usuario__rol__iexact='profesor'),
         required=False,
@@ -21,8 +19,6 @@ class CursoSerializer(serializers.ModelSerializer):
 
     def validate_profesor(self, value):
         return value or None
-
-    # --- ESTABLECIMIENTO (ACEPTA NULL TAMBIÉN) ---
     establecimiento = serializers.PrimaryKeyRelatedField(
         queryset=Curso._meta.get_field("establecimiento").remote_field.model.objects.all(),
         required=False,

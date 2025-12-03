@@ -22,8 +22,7 @@ class EstadoAlumnoSerializer(serializers.ModelSerializer):
             'observacion',
         ]
         read_only_fields = ['hora_registro', 'usuario_registro', 'fecha']
-
-    # ----------- FORMATEO DE HORA CORRECTO -----------
+        
     def get_hora_registro(self, obj):
         hora = getattr(obj, 'hora_registro', None)
         if not hora:
@@ -33,8 +32,7 @@ class EstadoAlumnoSerializer(serializers.ModelSerializer):
             return hora.strftime("%H:%M")
         except:
             return "-"
-    
-    # ----------- NOMBRE COMPLETO DEL ALUMNO -----------
+        
     def get_alumno_nombre(self, obj):
         persona = getattr(obj.alumno, 'persona', None)
         if not persona:

@@ -163,21 +163,18 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
             "fecha_nacimiento", "direccion", "comuna_id",
             "pais_nacionalidad_id", "fono", "email", "sexo"
         ]
-
-        # Actualizar datos de la persona
+        
         for field in persona_fields:
             if field in data:
                 setattr(persona, field, data[field])
         persona.save()
 
-        # Actualizar curso
         if "curso" in data:
             alumno.curso_id = data["curso"]
 
         if "curso_id" in data:
             alumno.curso_id = data["curso_id"]
-
-        #NUEVO — Actualizar furgón 
+            
         if "furgon" in data:
             alumno.furgon_id = data["furgon"]
 
@@ -201,7 +198,6 @@ class AlumnoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
         if not apoderado_data or not alumnos_data:
             return Response({"error": "Faltan datos para registrar la familia."}, status=400)
 
-        # Dirección del apoderado
         direccion_apoderado = crear_direccion(apoderado_data.get("direccion"))
         try:
             apoderado_ppal, _ = Persona.objects.get_or_create(
