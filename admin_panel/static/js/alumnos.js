@@ -437,7 +437,7 @@ formFamilia.addEventListener("submit", async e => {
     // --------------------------------------------
     mostrarLoader(true);
     const btnSubmit = formFamilia.querySelector("button[type='submit']");
-    btnSubmit.disabled = true;
+    if (btnSubmit) btnSubmit.disabled = true;
 
     const direccionPrincipal = {
         calle: formFamilia.calle_apoderado.value,
@@ -513,7 +513,7 @@ formFamilia.addEventListener("submit", async e => {
     });
 
     mostrarLoader(false);
-    btnSubmit.disabled = false;
+    if (btnSubmit) btnSubmit.disabled = false;
 
     const json = await res.json();
 

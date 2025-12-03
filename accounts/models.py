@@ -29,16 +29,12 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         FURGON = "furgon", "Furgon"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    username = models.CharField(max_length=150, blank=True, null=True)   # opcional
-    email = models.EmailField(unique=True, max_length=254)               # obligatorio
+    username = models.CharField(max_length=150, blank=True, null=True)
+    email = models.EmailField(unique=True, max_length=254)              
     password = models.CharField(max_length=255)
     first_name = models.CharField(max_length=150, blank=True, null=True)
     last_name = models.CharField(max_length=150, blank=True, null=True)
-    rol = models.CharField(
-        max_length=20,
-        choices=Roles.choices,
-        default=Roles.APODERADO
-    )
+    rol = models.CharField(max_length=20,choices=Roles.choices,default=Roles.APODERADO)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -46,7 +42,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
     objects = UsuarioManager()
 
-    USERNAME_FIELD = "email"   # login por email
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     class Meta:

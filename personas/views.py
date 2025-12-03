@@ -30,7 +30,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
 
-        # 👉 Validar RUN si viene
+        # Validar RUN si viene
         if "run" in data and data["run"]:
             run = data["run"].replace(".", "").replace(" ", "").upper()
             if not validar_run_chile(run):
@@ -74,7 +74,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         data = request.data.copy()
 
-        # 👉 Validar RUN si viene
+        # Validar RUN si viene
         if "run" in data and data["run"]:
             run = data["run"].replace(".", "").replace(" ", "").upper()
             if not validar_run_chile(run):
@@ -144,7 +144,7 @@ class PersonaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
 
         run = run.replace(".", "").replace(" ", "").upper()
 
-        # 👉 Validar RUN antes de consultar BD
+        # Validar RUN antes de consultar BD
         if not validar_run_chile(run):
             return Response({
                 "existe": False,
