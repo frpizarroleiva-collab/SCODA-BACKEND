@@ -137,40 +137,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================
-    // PORCENTAJE DE ASISTENCIA
+    // PORCENTAJE DE ASISTENCIA COMENTADO POSIBLE USO POSTERIOR
     // ============================================================
-    async function cargarPorcentajeAsistencia(cursoId = "") {
-        try {
-            const q = cursoId ? `?curso_id=${cursoId}` : "";
+    // async function cargarPorcentajeAsistencia(cursoId = "") {
+    //     try {
+    //         const q = cursoId ? `?curso_id=${cursoId}` : "";
 
-            const alumnos = await fetch(`${BASE}/api/alumnos${q}`, {
-                headers: getHeaders()
-            }).then(r => r.json());
+    //         const alumnos = await fetch(`${BASE}/api/alumnos${q}`, {
+    //             headers: getHeaders()
+    //         }).then(r => r.json());
 
-            const totalAlumnos = alumnos.length;
+    //         const totalAlumnos = alumnos.length;
 
-            const ausentes = await fetch(`${BASE}/api/estado-alumnos/ausentes${q}`, {
-                headers: getHeaders()
-            }).then(r => r.json());
+    //         const ausentes = await fetch(`${BASE}/api/estado-alumnos/ausentes${q}`, {
+    //             headers: getHeaders()
+    //         }).then(r => r.json());
 
-            const totalAus = ausentes.total_ausentes ?? 0;
+    //         const totalAus = ausentes.total_ausentes ?? 0;
 
-            const presentes = totalAlumnos - totalAus;
+    //         const presentes = totalAlumnos - totalAus;
 
-            const porcentaje = totalAlumnos > 0
-                ? ((presentes / totalAlumnos) * 100).toFixed(1)
-                : 0;
+    //         const porcentaje = totalAlumnos > 0
+    //             ? ((presentes / totalAlumnos) * 100).toFixed(1)
+    //             : 0;
 
-            document.getElementById("asistencia-porcentaje").textContent = `${porcentaje}%`;
-            document.getElementById("asistencia-detalle").textContent =
-                `${presentes} presentes de ${totalAlumnos}`;
+    //         document.getElementById("asistencia-porcentaje").textContent = `${porcentaje}%`;
+    //         document.getElementById("asistencia-detalle").textContent =
+    //             `${presentes} presentes de ${totalAlumnos}`;
 
-        } catch (error) {
-            console.error("Error cargando asistencia del día:", error);
-            document.getElementById("asistencia-porcentaje").textContent = "--%";
-            document.getElementById("asistencia-detalle").textContent = "Error al cargar";
-        }
-    }
+    //     } catch (error) {
+    //         console.error("Error cargando asistencia del día:", error);
+    //         document.getElementById("asistencia-porcentaje").textContent = "--%";
+    //         document.getElementById("asistencia-detalle").textContent = "Error al cargar";
+    //     }
+    // }
 
     // ============================================================
     // LISTADOS RÁPIDOS
@@ -264,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const cursoSel = document.getElementById("filtro-curso").value;
 
         await cargarTarjetas(cursoSel);
-        await cargarPorcentajeAsistencia(cursoSel);
+        // await cargarPorcentajeAsistencia(cursoSel);
         await cargarListadosRapidos(cursoSel);
 
         if (!auto) hideLoader();
